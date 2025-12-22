@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { QuizConfig, Difficulty, QuizType, QuizResult } from '../types';
 import { FileText, X, BrainCircuit, ImagePlus, ArrowRight, User, AlertCircle, History, PenTool, Loader2, PlayCircle, Layers, Save, ClipboardPaste, Sparkles, FileType } from 'lucide-react';
@@ -149,21 +150,24 @@ const SetupForm: React.FC<SetupFormProps> = ({
 
   const removeFile = (id: string) => setFileItems(prev => prev.filter(item => item.id !== id));
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setNameError('');
     setContentError('');
     let isValid = true;
-    let targetScrollRef: React.RefObject<any> | null = null;
+    
     const validFiles = fileItems.filter(i => i.status === 'success').map(i => ({ data: i.data, mimeType: i.mimeType, name: i.name }));
-    if (!content.trim() && validFiles.length === 0) { setContentError("Please provide material."); isValid = false; targetScrollRef = contentSectionRef; }
-    if (!userName.trim()) { setNameError("Name required."); isValid = false; if (!targetScrollRef) targetScrollRef = nameInputRef; }
-    if (isAnyFileLoading) return;
-    if (!isValid) {
-        targetScrollRef?.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (targetScrollRef === nameInputRef) nameInputRef.current?.focus();
-        return;
+    if (!content.trim() && validFiles.length === 0) { 
+        setContentError("Please provide material."); 
+        isValid = false; 
     }
+    if (!userName.trim()) { 
+        setNameError("Name required."); 
+        isValid = false; 
+    }
+
+    if (isAnyFileLoading || !isValid) return;
+
     localStorage.setItem('quiz_username', userName.trim());
     onStart({
       userName: userName.trim(), topic: topic.trim(), content,
@@ -172,10 +176,20 @@ const SetupForm: React.FC<SetupFormProps> = ({
     });
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+      // Only allow Enter key to submit if inside a standard input and not range/select
+      if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          // Optional: You could call handleSubmit() here if you wanted Enter to work for submission
+          // but specifically for your bug, we are disabling it to prevent accidental jumps.
+      }
+  };
+
   return (
     <div 
       className="min-h-screen w-full relative overflow-x-hidden" 
       ref={containerRef}
+      onKeyDown={handleKeyDown}
       style={{ '--mouse-x': '50%', '--mouse-y': '50%' } as React.CSSProperties}
     >
       <style>{`
@@ -277,7 +291,7 @@ const SetupForm: React.FC<SetupFormProps> = ({
                       {fileItems.map((f) => (
                         <div key={f.id} className="relative w-20 h-20 rounded-lg overflow-hidden border border-zinc-700 group bg-zinc-800 flex items-center justify-center shrink-0">
                           {f.status === 'loading' ? <Loader2 className="animate-spin text-blue-500" /> : f.mimeType.includes('image') ? <img src={f.data} className="w-full h-full object-cover" /> : <FileType className="w-6 h-6 text-red-400" />}
-                          <button onClick={(e) => { e.stopPropagation(); removeFile(f.id); }} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-5 h-5 text-white" /></button>
+                          <button type="button" onClick={(e) => { e.stopPropagation(); removeFile(f.id); }} className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-5 h-5 text-white" /></button>
                         </div>
                       ))}
                     </div>
