@@ -34,7 +34,6 @@ const getAvailableKeys = (): string[] => {
   }
 
   // 2. Fallback to process.env.API_KEY (System/Vercel keys)
-  // We support comma-separated lists for rotation/failover
   const envKey = process.env.API_KEY;
   if (envKey) {
     return envKey.split(',').map(k => k.trim()).filter(k => k.length > 0);
@@ -43,10 +42,8 @@ const getAvailableKeys = (): string[] => {
   return [];
 };
 
-// --- Configuration & API Logic ---
-
 /**
- * Validates an API key. 
+ * Validates an API key using the free-tier Flash model.
  */
 export const validateApiKey = async (apiKey: string): Promise<boolean> => {
   try {
@@ -63,8 +60,7 @@ export const validateApiKey = async (apiKey: string): Promise<boolean> => {
 };
 
 /**
- * Generates a quiz from provided content using Google Gemini.
- * Includes failover logic for multiple keys.
+ * Generates a quiz from provided content using Google Gemini 3 Flash (Free Tier).
  */
 export const generateQuizFromContent = async (config: QuizConfig): Promise<GeneratedQuizData> => {
   const keys = getAvailableKeys();
@@ -73,7 +69,6 @@ export const generateQuizFromContent = async (config: QuizConfig): Promise<Gener
     throw new Error("No API keys found. Please add a key in the settings or configure the system environment.");
   }
 
-  // Define the schema for the JSON response
   const schema = {
     type: Type.OBJECT,
     properties: {
@@ -101,7 +96,7 @@ export const generateQuizFromContent = async (config: QuizConfig): Promise<Gener
   };
 
   const difficultyPrompt = {
-    'Easy': "Focus on direct recall and basic facts. Simple language.",
+    'Easy': "Focus on direct recall and basic facts.",
     'Medium': "Focus on conceptual understanding and application.",
     'Hard': "Focus on analysis, reasoning, and scenarios."
   };
@@ -111,7 +106,6 @@ export const generateQuizFromContent = async (config: QuizConfig): Promise<Gener
     : "Generate Multiple Choice questions with exactly 4 options and one correct answer.";
 
   const systemInstruction = `You are an expert educational content creator. 
-  Analyze the provided content. 
   ${config.topic ? `Use title: "${config.topic}".` : "Generate a relevant title."}
   Generate ${config.questionCount} questions.
   Type: ${config.quizType}. ${typeSpecificInstruction}
@@ -129,16 +123,14 @@ export const generateQuizFromContent = async (config: QuizConfig): Promise<Gener
     parts.push({ inlineData: { data: cleanBase64, mimeType: file.mimeType } });
   });
 
-  let lastError: any = null;
   let errorLogs: string[] = [];
 
-  // Key Rotation Loop
   for (let i = 0; i < keys.length; i++) {
     const apiKey = keys[i];
     try {
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+        model: 'gemini-3-flash-preview',
         contents: { parts: parts },
         config: {
           systemInstruction: systemInstruction,
@@ -154,22 +146,16 @@ export const generateQuizFromContent = async (config: QuizConfig): Promise<Gener
       return parseJSON(text) as GeneratedQuizData;
 
     } catch (error: any) {
-      lastError = error;
       const errorMsg = error.message || "Unknown error";
       errorLogs.push(`Key ${i+1} Failure: ${errorMsg}`);
 
-      // If it's a rate limit error (429) and we have more keys, continue to next key
-      if ((errorMsg.includes('429') || errorMsg.includes('quota') || errorMsg.includes('limit')) && i < keys.length - 1) {
-        console.warn(`API Key ${i+1} rate limited. Retrying with next key...`);
+      if ((errorMsg.includes('429') || errorMsg.includes('quota')) && i < keys.length - 1) {
         continue;
       }
-      
-      // If it's a different type of error (e.g. prompt blocked) or we're out of keys, stop
       break;
     }
   }
 
-  // If we get here, all attempted keys failed
   const finalLog = errorLogs.join('\n');
   throw new Error(`CRITICAL_FAILURE_LOGS::${finalLog}`);
 };
