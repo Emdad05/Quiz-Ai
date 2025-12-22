@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { Question } from '../types';
-import { Clock, ChevronLeft, ChevronRight, CheckCircle2, Flag, Menu, SkipForward, AlertTriangle, RotateCcw, X, Save, Trash2, LogOut } from 'lucide-react';
+import { Clock, CheckCircle2, Flag, Menu, AlertTriangle, RotateCcw, Save, Trash2, LogOut, ArrowRight, ArrowLeft, X, Trophy } from 'lucide-react';
 
 interface QuizInterfaceProps {
   questions: Question[];
@@ -11,14 +12,19 @@ interface QuizInterfaceProps {
 
 const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinutes, onComplete, onExit }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  // Store answers as number (index) or string (text)
   const [answers, setAnswers] = useState<Record<number, number | string>>({});
   const [timeLeft, setTimeLeft] = useState(durationMinutes * 60);
   const [markedForReview, setMarkedForReview] = useState<Set<number>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showIncompleteAlert, setShowIncompleteAlert] = useState(false);
+  
+  const finishButtonRef = useRef<HTMLButtonElement>(null);
+  const navAreaRef = useRef<HTMLDivElement>(null);
+  const questionCardRef = useRef<HTMLDivElement>(null);
 
+  // Auto-save and progress restoration
   useEffect(() => {
     try {
       const savedProgress = localStorage.getItem('quiz_progress');
@@ -64,12 +70,13 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
     } catch (e) { /* silent fail */ }
   }, [currentIndex, answers, timeLeft, markedForReview, questions, durationMinutes]);
 
+  // Timer logic
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmit();
+          handleSubmit(); 
           return 0;
         }
         return prev - 1;
@@ -79,6 +86,20 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
     return () => clearInterval(timer);
   }, []);
 
+  // Scroll to Top of question when navigating (Next/Prev/Sidebar)
+  useEffect(() => {
+    if (questionCardRef.current) {
+        const headerOffset = 100;
+        const elementPosition = questionCardRef.current.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
+  }, [currentIndex]);
+
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -87,6 +108,10 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
 
   const handleSelectOption = (optionIndex: number) => {
     setAnswers(prev => ({ ...prev, [questions[currentIndex].id]: optionIndex }));
+    // Auto-scroll to show next/prev/finish buttons after choosing an answer
+    setTimeout(() => {
+        navAreaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 300);
   };
   
   const handleTextAnswer = (text: string) => {
@@ -110,7 +135,15 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
     });
   };
 
-  const requestSubmit = () => setShowSubmitConfirm(true);
+  const checkCompletion = () => {
+    const answeredCount = Object.keys(answers).length;
+    if (answeredCount < questions.length) {
+      setShowIncompleteAlert(true);
+    } else {
+      setShowSubmitConfirm(true);
+    }
+  };
+
   const handleSubmit = () => {
     const timeTaken = (durationMinutes * 60) - timeLeft;
     onComplete(answers, timeTaken);
@@ -130,212 +163,289 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
   const isShortAnswer = !currentQuestion.options || currentQuestion.options.length === 0;
 
   const answeredCount = Object.keys(answers).length;
-  const progressPercent = (answeredCount / questions.length) * 100;
+  const isLastQuestion = currentIndex === questions.length - 1;
 
   return (
-    <div className="min-h-screen bg-zinc-50 flex flex-col font-sans">
-      <header className="bg-white sticky top-0 z-20 border-b border-zinc-200 relative shadow-sm">
-        <div className="absolute bottom-0 left-0 w-full flex h-1.5" role="tablist">
-           {questions.map((q, idx) => {
-               const isCurrent = idx === currentIndex;
-               const isAnswered = answers[q.id] !== undefined;
-               const isFlagged = markedForReview.has(q.id);
-               let bgColor = 'bg-zinc-200 hover:bg-zinc-300';
-               if (isCurrent) bgColor = 'bg-blue-600';
-               else if (isFlagged) bgColor = 'bg-yellow-400';
-               else if (isAnswered) bgColor = 'bg-blue-400';
+    <div className="min-h-screen bg-[#FDFDFD] flex flex-col font-sans selection:bg-zinc-200 text-zinc-900">
+      {/* Header */}
+      <header className="bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-zinc-200 transition-all duration-300 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+             <button 
+                onClick={() => setIsSidebarOpen(true)} 
+                className="p-2 -ml-2 text-zinc-400 hover:bg-zinc-100 rounded-xl transition-colors md:hidden"
+             >
+                <Menu className="w-5 h-5" />
+             </button>
+             <div className="font-black text-xl tracking-tighter text-zinc-900 select-none hidden xs:block">QUIZ<span className="text-zinc-400 font-light">GENIUS</span></div>
+          </div>
 
-               return (
-                   <button
-                       key={q.id}
-                       onClick={() => setCurrentIndex(idx)}
-                       className={`flex-1 transition-colors duration-200 ${bgColor} ${idx < questions.length - 1 ? 'border-r border-white/50' : ''}`}
-                   />
-               );
-           })}
-        </div>
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-             <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 -ml-2 text-zinc-600 hover:bg-zinc-100 rounded-md">
-                <Menu className="w-6 h-6" />
+          {/* Centralized Text-Based Navigation (Alive even on last question) */}
+          <div className="hidden sm:flex items-center bg-zinc-100 rounded-2xl p-1 gap-1 border border-zinc-200">
+            <button
+              onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+              disabled={currentIndex === 0}
+              className="flex items-center px-4 py-2 text-[11px] font-black uppercase tracking-wider text-zinc-500 hover:bg-white hover:text-zinc-900 rounded-xl disabled:opacity-10 transition-all border border-transparent hover:border-zinc-200 disabled:cursor-not-allowed"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 mr-2" /> Previous
+            </button>
+            
+            <div className="px-5 py-2 bg-white rounded-lg border border-zinc-200/50 min-w-[100px] text-center shadow-sm">
+               <span className="text-[12px] font-black text-zinc-900 tracking-tighter">{currentIndex + 1} OF {questions.length}</span>
+            </div>
+
+            <button
+              onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
+              disabled={isLastQuestion}
+              className={`flex items-center px-4 py-2 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all border border-transparent disabled:opacity-10 disabled:cursor-not-allowed ${isLastQuestion ? 'text-zinc-300' : 'text-zinc-500 hover:bg-white hover:text-zinc-900 hover:border-zinc-200'}`}
+            >
+              Next <ArrowRight className="w-3.5 h-3.5 ml-2" />
+            </button>
+          </div>
+
+          {/* Action Area: Submit Button (Relocated and Enhanced) & Timer */}
+          <div className="flex items-center gap-3">
+             {/* Enhanced Submit Button at Top */}
+             <button 
+                onClick={checkCompletion}
+                className="group relative flex items-center gap-2 bg-zinc-900 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 overflow-hidden"
+             >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="relative z-10 flex items-center gap-2">
+                    FINISH <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                </span>
              </button>
-             <div className="font-bold text-xl text-zinc-900 hidden xs:block">QuizGenius</div>
-             <div className="flex items-center space-x-2 text-zinc-700 font-medium">
-                <Clock className={`w-5 h-5 ${timeLeft < 60 ? 'text-red-600' : 'text-zinc-900'}`} />
-                <span className={`font-mono text-lg ${timeLeft < 60 ? 'text-red-600' : ''}`}>{formatTime(timeLeft)}</span>
+
+             <div className="h-8 w-px bg-zinc-200 mx-1 hidden sm:block" />
+
+             <div className={`flex items-center gap-2 px-3 py-2 bg-zinc-100 rounded-xl border border-zinc-200 ${timeLeft < 60 ? 'animate-pulse bg-red-50 border-red-100' : ''}`}>
+                <Clock className={`w-4 h-4 ${timeLeft < 60 ? 'text-red-500' : 'text-zinc-400'}`} />
+                <span className={`font-mono text-sm font-bold tabular-nums ${timeLeft < 60 ? 'text-red-500' : 'text-zinc-600'}`}>{formatTime(timeLeft)}</span>
              </div>
-          </div>
-          <div className="flex items-center space-x-4">
-             <div className="hidden sm:block text-xs font-semibold text-zinc-500 mr-2">{Math.round(progressPercent)}% Complete</div>
-             <button onClick={requestCancel} className="hidden sm:flex text-zinc-500 hover:text-red-600 font-medium text-sm transition-colors px-3 py-2 rounded-lg hover:bg-red-50">
-                 Cancel
+             
+             <button onClick={requestCancel} className="p-2.5 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all border border-transparent hover:border-red-100 hidden sm:flex">
+                <LogOut className="w-5 h-5" />
              </button>
-             <button onClick={requestSubmit} className="bg-zinc-900 hover:bg-zinc-800 text-white px-5 py-2 rounded-lg font-medium text-sm transition-colors shadow-sm">Submit</button>
           </div>
+        </div>
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-zinc-100">
+            <div 
+                className="h-full bg-zinc-900 transition-all duration-500 ease-out" 
+                style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
+            />
         </div>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 flex flex-col md:flex-row gap-8 relative">
+      <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 flex flex-col md:flex-row gap-10">
+        {/* Mobile Overlay (Closes Sidebar on Click) */}
         {isSidebarOpen && (
-            <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setIsSidebarOpen(false)} />
+            <div 
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 md:hidden animate-in fade-in" 
+                onClick={() => setIsSidebarOpen(false)} 
+            />
         )}
-        <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-zinc-50 md:bg-transparent transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'} md:translate-x-0 md:static md:block shrink-0`}>
-          <div className="h-full overflow-y-auto p-4 md:p-0">
-              <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 md:sticky md:top-24">
-                <div className="flex items-center justify-between mb-6 hidden md:flex">
-                  <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-wider">Navigator</h3>
-                  <button onClick={requestCancel} className="text-xs text-red-600 hover:underline font-semibold">Quit</button>
+        
+        {/* Navigation Sidebar */}
+        <aside className={`fixed inset-y-0 left-0 z-[60] w-72 bg-white border-r border-zinc-200 md:bg-transparent md:border-r-0 transform transition-transform duration-300 ${isSidebarOpen ? 'translate-x-0 shadow-2xl md:shadow-none' : '-translate-x-full'} md:translate-x-0 md:static md:block shrink-0`}>
+          <div className="h-full overflow-y-auto p-6 md:p-0">
+              <div className="bg-white rounded-[2rem] border border-zinc-200 p-8 md:sticky md:top-28 shadow-sm h-fit">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Navigator</h3>
+                  <button onClick={() => setIsSidebarOpen(false)} className="p-2 -mr-2 text-zinc-400 hover:bg-zinc-100 rounded-xl md:hidden">
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-3">
                   {questions.map((q, idx) => {
                     const isAnswered = answers[q.id] !== undefined;
                     const isCurrent = idx === currentIndex;
                     const isReview = markedForReview.has(q.id);
-                    let btnClass = "aspect-square rounded flex items-center justify-center text-sm font-bold border ";
-                    if (isCurrent) btnClass += "bg-blue-600 text-white border-blue-600";
-                    else if (isReview) btnClass += "bg-white text-blue-600 border-blue-300";
-                    else if (isAnswered) btnClass += "bg-white text-zinc-900 border-zinc-800";
-                    else btnClass += "bg-zinc-50 text-zinc-400 hover:bg-zinc-100 border-zinc-200";
+                    let stateStyles = "bg-zinc-50 text-zinc-300 border-zinc-100";
+                    if (isCurrent) stateStyles = "bg-zinc-900 text-white border-zinc-900 shadow-xl scale-110 z-10";
+                    else if (isReview) stateStyles = "bg-amber-50 text-amber-600 border-amber-200";
+                    else if (isAnswered) stateStyles = "bg-white text-zinc-900 border-zinc-900";
+
                     return (
-                      <button key={q.id} onClick={() => { setCurrentIndex(idx); setIsSidebarOpen(false); }} className={btnClass}>{idx + 1}</button>
+                      <button 
+                        key={q.id} 
+                        onClick={() => { setCurrentIndex(idx); setIsSidebarOpen(false); }} 
+                        className={`aspect-square rounded-xl flex items-center justify-center text-xs font-bold border transition-all duration-200 ${stateStyles} hover:border-zinc-400`}
+                      >
+                        {idx + 1}
+                      </button>
                     );
                   })}
                 </div>
                 
-                {/* Mobile Menu Footer Action */}
-                <div className="mt-8 pt-4 border-t border-zinc-100 md:hidden">
-                    <button onClick={requestCancel} className="w-full flex items-center justify-center gap-2 text-red-600 font-bold p-2 hover:bg-red-50 rounded-lg">
-                        <LogOut className="w-4 h-4" /> Cancel Quiz
+                <div className="mt-12 pt-8 border-t border-zinc-100 space-y-4">
+                    <button onClick={toggleReviewMark} className={`w-full flex items-center justify-center gap-3 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${isMarked ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-sm' : 'bg-white text-zinc-400 border-zinc-100 hover:border-zinc-300'}`}>
+                        <Flag className={`w-4 h-4 ${isMarked ? 'fill-amber-600' : ''}`} /> {isMarked ? 'Marked for Review' : 'Flag Question'}
+                    </button>
+                    <button onClick={handleUndoAnswer} className={`w-full py-3 bg-zinc-50 text-zinc-400 hover:text-zinc-900 border border-zinc-100 hover:border-zinc-200 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${currentAnswer === undefined ? 'opacity-0 pointer-events-none' : ''}`}>
+                        <RotateCcw className="w-3.5 h-3.5" /> Clear Answer
                     </button>
                 </div>
               </div>
           </div>
         </aside>
 
+        {/* Assessment Card */}
         <div className="flex-1 max-w-3xl">
-          <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 md:p-10 min-h-[500px] flex flex-col">
-            <div className="flex justify-between items-start mb-6">
-              <span className="inline-flex items-center h-8 px-3 rounded bg-zinc-100 text-zinc-700 text-sm font-bold">
-                Q {currentIndex + 1} <span className="text-zinc-400 font-normal ml-1">/ {questions.length}</span>
+          <div ref={questionCardRef} className="bg-white rounded-[2.5rem] border border-zinc-200 p-8 md:p-14 min-h-[600px] flex flex-col shadow-sm transition-all animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="flex items-center justify-between mb-10">
+              <span className="inline-flex items-center h-7 px-4 rounded-full bg-zinc-100 text-zinc-500 text-[9px] font-black uppercase tracking-[0.2em] border border-zinc-200/50">
+                Question {currentIndex + 1}
               </span>
-              <div className="flex items-center gap-3">
-                  {currentAnswer !== undefined && (
-                      <button onClick={handleUndoAnswer} className="flex items-center space-x-2 px-3 py-1.5 text-zinc-500 hover:bg-zinc-100 rounded-md text-sm font-medium">
-                          <RotateCcw className="w-4 h-4" /> <span className="hidden sm:inline">Undo</span>
-                      </button>
-                  )}
-                  <button onClick={toggleReviewMark} className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-semibold border ${isMarked ? 'bg-zinc-100 text-zinc-900 border-zinc-300' : 'text-zinc-400 border-transparent'}`}>
-                    <Flag className={`w-4 h-4 ${isMarked ? 'fill-zinc-900' : ''}`} /> <span className="hidden sm:inline">Review</span>
-                  </button>
+              <div className="flex gap-2">
+                {isMarked && <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-amber-600 animate-in fade-in zoom-in-50"><Flag className="w-3 h-3 fill-amber-600" /> REVIEWING</span>}
               </div>
             </div>
 
-            <h2 className="text-xl md:text-2xl font-bold text-zinc-900 mb-8 leading-snug">{currentQuestion.questionText}</h2>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-zinc-900 mb-12 leading-[1.35] tracking-tight">{currentQuestion.questionText}</h2>
 
             <div className="space-y-4 flex-1">
               {isShortAnswer ? (
-                  <div>
-                      <label className="block text-sm font-bold text-zinc-700 mb-2">Your Answer</label>
+                  <div className="animate-in fade-in duration-500">
                       <textarea
                         value={(currentAnswer as string) || ''}
                         onChange={(e) => handleTextAnswer(e.target.value)}
-                        placeholder="Type your answer here..."
-                        className="w-full h-32 p-4 border border-zinc-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-blue-600 text-lg"
+                        placeholder="Type your response here..."
+                        className="w-full h-48 p-8 bg-zinc-50/50 border border-zinc-200 rounded-3xl focus:ring-0 focus:border-zinc-900 outline-none text-lg transition-all placeholder:text-zinc-300 font-medium"
                       />
                   </div>
               ) : (
-                  currentQuestion.options.map((option, idx) => {
+                  <div className="grid grid-cols-1 gap-4">
+                  {currentQuestion.options.map((option, idx) => {
                     const isSelected = currentAnswer === idx;
+                    const labels = ['A', 'B', 'C', 'D', 'E'];
                     return (
                       <button
                         key={idx}
                         onClick={() => handleSelectOption(idx)}
-                        className={`w-full text-left p-5 rounded-lg border flex items-start group transition-all ${isSelected ? 'border-blue-600 bg-blue-50' : 'border-zinc-200 bg-white hover:bg-zinc-50'}`}
+                        className={`group relative w-full text-left p-6 rounded-3xl border-2 flex items-start transition-all duration-300 ${isSelected ? 'border-zinc-900 bg-zinc-900 text-white shadow-2xl scale-[1.02]' : 'border-zinc-100 bg-white hover:border-zinc-300 hover:bg-zinc-50'}`}
                       >
-                        <div className={`w-5 h-5 rounded-full border flex-shrink-0 mr-4 flex items-center justify-center mt-0.5 ${isSelected ? 'border-blue-600 bg-blue-600' : 'border-zinc-300'}`}>
-                          {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                        <div className={`w-9 h-9 rounded-xl border flex-shrink-0 mr-6 flex items-center justify-center font-black text-sm transition-all ${isSelected ? 'bg-white text-zinc-900 border-white' : 'bg-zinc-100 text-zinc-400 border-zinc-200 group-hover:bg-zinc-200'}`}>
+                          {labels[idx]}
                         </div>
-                        <span className={`text-base ${isSelected ? 'text-zinc-900 font-medium' : 'text-zinc-700'}`}>{option}</span>
+                        <span className={`text-base font-bold leading-relaxed pr-10 mt-1 transition-colors ${isSelected ? 'text-white' : 'text-zinc-700'}`}>{option}</span>
+                        {isSelected && <div className="absolute right-8 top-1/2 -translate-y-1/2 text-white"><CheckCircle2 className="w-6 h-6 animate-in zoom-in-95" /></div>}
                       </button>
                     )
-                  })
+                  })}
+                  </div>
               )}
             </div>
 
-            <div className="flex flex-col sm:flex-row justify-between items-center mt-10 pt-6 border-t border-zinc-100 gap-4">
-              <button
-                onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
-                disabled={currentIndex === 0}
-                className="w-full sm:w-auto flex justify-center items-center px-4 py-2 text-zinc-500 font-bold hover:text-zinc-900 disabled:opacity-30"
-              >
-                <ChevronLeft className="w-5 h-5 mr-1" /> Previous
-              </button>
-              
-              <div className="flex items-center space-x-3 w-full sm:w-auto">
-                {currentIndex < questions.length - 1 ? (
-                    <button
-                    onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
-                    className="flex-1 sm:flex-none flex items-center justify-center px-6 py-2.5 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800"
+            {/* Bottom Navigation Area (Keeps Prev/Next Alive) */}
+            <div ref={navAreaRef} className="mt-14 pt-10 border-t border-zinc-100 flex flex-col items-center">
+                 <div className="flex w-full items-center justify-between gap-4">
+                    <button 
+                        onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentIndex === 0}
+                        className="flex-1 py-4 bg-zinc-100 text-zinc-600 rounded-2xl font-black text-[10px] uppercase tracking-widest disabled:opacity-20 transition-all hover:bg-zinc-200 flex items-center justify-center gap-2"
                     >
-                    Next <ChevronRight className="w-5 h-5 ml-1" />
+                        <ArrowLeft className="w-3.5 h-3.5" /> PREVIOUS
                     </button>
-                ) : (
-                    <button onClick={requestSubmit} className="flex-1 sm:flex-none flex items-center justify-center px-6 py-2.5 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800">
-                    Finish Exam <CheckCircle2 className="w-5 h-5 ml-2" />
+                    <button 
+                        onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                        disabled={isLastQuestion}
+                        className={`flex-1 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-20 ${isLastQuestion ? 'bg-zinc-100 text-zinc-300' : 'bg-zinc-900 text-white hover:bg-black shadow-lg'}`}
+                    >
+                        NEXT <ArrowRight className="w-3.5 h-3.5" />
                     </button>
-                )}
-              </div>
+                 </div>
+                 
+                 {isLastQuestion && (
+                    <div className="mt-8 flex flex-col items-center animate-in fade-in zoom-in-95 duration-500">
+                        <div className="flex items-center gap-2 text-[9px] font-black text-blue-500 uppercase tracking-[0.4em] mb-4">
+                           <Trophy className="w-3 h-3" /> FINAL QUESTION REACHED
+                        </div>
+                        <p className="text-[11px] text-zinc-400 font-medium mb-2">Ready to see your results?</p>
+                        <button 
+                          onClick={checkCompletion}
+                          className="px-10 py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                        >
+                           Submit Assessment <ArrowRight className="w-4 h-4" />
+                        </button>
+                    </div>
+                 )}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Submit Confirmation */}
-      {showSubmitConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
-                <div className="flex items-center gap-3 text-amber-500 mb-4">
-                    <AlertTriangle className="w-8 h-8" />
-                    <h3 className="text-xl font-bold text-zinc-900">Submit Assessment?</h3>
+      {/* Incomplete Questions Alert */}
+      {showIncompleteAlert && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-xl animate-in fade-in duration-300">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
+                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center text-red-500 mx-auto mb-8 border border-red-100 ring-8 ring-red-50/50">
+                    <AlertTriangle className="w-10 h-10" />
                 </div>
-                <p className="text-zinc-600 mb-6">You are about to submit your assessment. Unanswered questions will be marked incorrect.</p>
-                <div className="flex gap-3">
-                    <button onClick={() => setShowSubmitConfirm(false)} className="flex-1 py-3 text-zinc-700 font-bold hover:bg-zinc-100 rounded-lg border border-zinc-200">Review</button>
-                    <button onClick={handleSubmit} className="flex-1 py-3 bg-zinc-900 text-white font-bold hover:bg-zinc-800 rounded-lg">Submit</button>
+                <h3 className="text-3xl font-black text-zinc-900 mb-6 tracking-tight">Wait! Unanswered Questions</h3>
+                <p className="text-zinc-500 mb-10 leading-relaxed font-medium text-lg">
+                    You have <span className="text-zinc-900 font-bold">{questions.length - answeredCount} questions</span> left blank. 
+                    Would you like to review them or submit your current progress?
+                </p>
+                <div className="flex flex-col w-full gap-4">
+                    <button onClick={() => setShowIncompleteAlert(false)} className="w-full py-5 bg-zinc-900 text-white font-black rounded-3xl hover:bg-black transition-all shadow-xl text-lg uppercase tracking-widest">
+                        GO BACK & FINISH
+                    </button>
+                    <button onClick={() => { setShowIncompleteAlert(false); setShowSubmitConfirm(true); }} className="w-full py-4 text-zinc-400 font-bold hover:text-red-500 transition-colors uppercase tracking-widest text-xs">
+                        SUBMIT ANYWAY
+                    </button>
                 </div>
             </div>
         </div>
       )}
 
-      {/* Cancel/Exit Confirmation */}
-      {showCancelConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-zinc-200">
-                <div className="flex items-center gap-3 text-red-600 mb-4">
-                    <LogOut className="w-6 h-6" />
-                    <h3 className="text-lg font-bold text-zinc-900">Cancel Assessment?</h3>
+      {/* Submit Confirmation Modal */}
+      {showSubmitConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
+                <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-900 mx-auto mb-8 border border-zinc-200">
+                    <CheckCircle2 className="w-10 h-10" />
                 </div>
-                <p className="text-zinc-600 mb-6 text-sm">
-                    You are leaving the exam. Would you like to save your progress to resume later, or discard it?
+                <h3 className="text-3xl font-black text-zinc-900 mb-4 tracking-tight">Submit Exam?</h3>
+                <p className="text-zinc-500 mb-10 leading-relaxed font-medium">
+                    Are you ready to finalize your work? You won't be able to change your answers after this.
                 </p>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col w-full gap-4">
+                    <button onClick={handleSubmit} className="w-full py-5 bg-zinc-900 text-white font-black rounded-3xl hover:bg-black transition-all shadow-xl text-lg uppercase tracking-widest">CONFIRM SUBMIT</button>
+                    <button onClick={() => setShowSubmitConfirm(false)} className="w-full py-4 text-zinc-400 font-bold hover:text-zinc-900 transition-colors uppercase tracking-widest text-xs">RETURN TO EXAM</button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Cancel/Exit Confirmation Modal */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-sm w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
+                <div className="w-20 h-20 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 mx-auto mb-8 border border-zinc-100">
+                    <LogOut className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-black text-zinc-900 mb-4 tracking-tight">Leave Assessment?</h3>
+                <p className="text-zinc-500 mb-10 leading-relaxed font-medium text-sm">
+                    You can save your current session to continue later.
+                </p>
+                <div className="flex flex-col w-full gap-3">
                     <button 
                         onClick={handleSaveAndExit}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-900 text-white font-bold rounded-lg hover:bg-zinc-800 shadow-sm"
+                        className="w-full flex items-center justify-center gap-3 py-4 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl uppercase tracking-widest text-xs"
                     >
                         <Save className="w-4 h-4" /> Save & Exit
                     </button>
                     <button 
                         onClick={handleDiscardAndExit}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-white text-red-600 border border-red-200 font-bold rounded-lg hover:bg-red-50"
+                        className="w-full flex items-center justify-center gap-3 py-4 bg-white text-red-600 border border-red-100 font-black rounded-2xl hover:bg-red-50 transition-all uppercase tracking-widest text-xs"
                     >
-                        <Trash2 className="w-4 h-4" /> Discard & Exit
+                        <Trash2 className="w-4 h-4" /> Discard
                     </button>
                     <button 
                         onClick={() => setShowCancelConfirm(false)}
-                        className="w-full py-3 text-zinc-500 font-bold hover:text-zinc-800"
+                        className="w-full py-4 text-zinc-400 font-bold hover:text-zinc-900 transition-colors uppercase tracking-widest text-[10px]"
                     >
-                        Continue Quiz
+                        Stay
                     </button>
                 </div>
             </div>
