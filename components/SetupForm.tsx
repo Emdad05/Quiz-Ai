@@ -154,7 +154,7 @@ const SetupForm: React.FC<SetupFormProps> = ({
     setNameError('');
     setContentError('');
     let isValid = true;
-    let targetScrollRef: React.RefObject<HTMLElement> | null = null;
+    let targetScrollRef: React.RefObject<any> | null = null;
     const validFiles = fileItems.filter(i => i.status === 'success').map(i => ({ data: i.data, mimeType: i.mimeType, name: i.name }));
     if (!content.trim() && validFiles.length === 0) { setContentError("Please provide material."); isValid = false; targetScrollRef = contentSectionRef; }
     if (!userName.trim()) { setNameError("Name required."); isValid = false; if (!targetScrollRef) targetScrollRef = nameInputRef; }
