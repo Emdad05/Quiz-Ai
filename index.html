@@ -11,7 +11,6 @@
         font-family: 'Inter', sans-serif;
         background-color: #09090b;
         color: #ffffff;
-        /* Disable text selection */
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
@@ -19,7 +18,6 @@
         margin: 0;
         padding: 0;
       }
-      /* Custom Scrollbar - Dark Theme */
       ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -35,36 +33,36 @@
         background: #3f3f46; 
       }
     </style>
-  <script type="importmap">
+<script type="importmap">
 {
   "imports": {
-    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
     "react/": "https://esm.sh/react@^19.2.3/",
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "jspdf": "https://esm.sh/jspdf@^3.0.4"
+    "recharts": "https://esm.sh/recharts@^3.6.0",
+    "jspdf": "https://esm.sh/jspdf@^3.0.4",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
     <script>
-      // Helper to check if event target is an editable field
       const isEditable = (target) => {
         return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
       };
 
-      // Disable context menu except on inputs
       document.addEventListener('contextmenu', event => {
         if (!isEditable(event.target)) {
           event.preventDefault();
         }
       });
 
-      // Disable copy/cut/paste except on inputs
       const blockClipboard = (event) => {
         if (!isEditable(event.target)) {
           event.preventDefault();
@@ -77,11 +75,9 @@
       document.addEventListener('paste', blockClipboard);
 
       document.addEventListener('keydown', event => {
-        // Prevent Ctrl+P, Ctrl+S globally
         if (event.ctrlKey && ['p', 's'].includes(event.key.toLowerCase())) {
            event.preventDefault();
         }
-        // Prevent Ctrl+C, Ctrl+V, Ctrl+X only if NOT on input
         if (event.ctrlKey && ['c', 'v', 'x', 'a'].includes(event.key.toLowerCase())) {
             if (!isEditable(event.target)) {
                 event.preventDefault();
