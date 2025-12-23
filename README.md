@@ -36,14 +36,14 @@ npm install
 
 ```bash
 # create .env.local in the project root and add one of the following:
-# Preferred environment variable name:
+# Preferred environment variable name (single key or comma-separated list):
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Or, the app also accepts this alternative name:
+# Or, the app also accepts this alternative name (single key or comma-separated list):
 API_KEY=your_gemini_api_key_here
 ```
 
-Note: The app will check for `GEMINI_API_KEY` first, and fall back to `API_KEY` if the preferred variable is not set.
+Note: The app will check for `GEMINI_API_KEY` first, and fall back to `API_KEY` if the preferred variable is not set. You can provide multiple keys separated by commas (see "Multiple API keys" below).
 
 4. Run the app locally:
 
@@ -59,6 +59,63 @@ Environment variables
 
 Keep these secrets out of source control. Do NOT commit keys to the repository.
 
+Multiple API keys
+- You can list multiple API keys in a single environment variable separated by commas to help distribute requests across keys (for example to reduce the chance of hitting a single-key rate limit):
+
+  Example .env entry:
+
+  ```bash
+  # Preferred env var name (comma-separated list)
+  GEMINI_API_KEY=gemini_api_1,gemini_api_2,gemini_api_3
+
+  # Or the fallback name
+  API_KEY=gemini_api_1,gemini_api_2,gemini_api_3
+  ```
+
+- When multiple keys are provided, the app will pick one key per outgoing request. The selection strategy can be random, round-robin, or another policy you prefer. Below are code snippets showing how to parse and select keys in Node.js.
+
+Node.js snippet — parse keys and pick one at random
+
+```javascript
+// parse comma-separated keys from env, preferring GEMINI_API_KEY
+const rawKeys = process.env.GEMINI_API_KEY || process.env.API_KEY || '';
+const apiKeys = rawKeys
+  .split(',')
+  .map(k => k.trim())
+  .filter(Boolean);
+
+if (apiKeys.length === 0) {
+  throw new Error('No Gemini API key found. Set GEMINI_API_KEY or API_KEY in .env.');
+}
+
+// choose a key per request (random example)
+function getApiKeyRandom() {
+  return apiKeys[Math.floor(Math.random() * apiKeys.length)];
+}
+
+// usage in a request:
+const apiKeyToUse = getApiKeyRandom();
+// attach `apiKeyToUse` to the request headers or client config for the Gemini/Generative AI call
+```
+
+Node.js snippet — simple round-robin selection
+
+```javascript
+let rrIndex = 0;
+function getApiKeyRoundRobin() {
+  if (apiKeys.length === 0) return null;
+  const key = apiKeys[rrIndex % apiKeys.length];
+  rrIndex = (rrIndex + 1) % apiKeys.length;
+  return key;
+}
+```
+
+Important notes about multiple keys
+- Do NOT expose these keys in client-side code. Keep keys server-side or only use the browser "Add API Key" option for local testing with a single key.
+- Rotating or using multiple keys to intentionally bypass rate limits may violate the API provider’s terms of service. Prefer increasing quotas, using paid plans, or contacting the provider for a supported solution.
+- Always restrict and rotate keys and never commit them to source control.
+- Implement retry/backoff and per-key error handling (e.g., temporarily disable a key that's returning quota errors).
+
 Getting a Gemini API key
 1. Create or sign in to a Google Cloud project (Gemini models are accessed via Google's Generative AI/Vertex AI services).
 2. Enable the Generative AI (PaLM/Gemini) or Vertex AI API for your project.
@@ -72,8 +129,17 @@ For official documentation and the latest instructions, see the Google Generativ
 How to use
 1. Open the app in your browser.
 2. Add your API key:
-   - Option A (environment variable): Add `GEMINI_API_KEY` (or `API_KEY`) in `.env.local` and restart the app.
-   - Option B (in-browser): Use the app's "Add API Key" option (typically found in the app settings or header). Pasting your key in the browser stores it locally (for your browser session or localStorage) so you can use the app without setting environment variables. This is convenient for quick testing but less secure for shared machines—do not paste keys on public or shared computers.
+   - Option A (environment variable): Add `GEMINI_API_KEY` (or `API_KEY`) in `.env.local` and restart the app. You can provide a single key or multiple comma-separated keys.
+   - Option B (in-browser): Use the app's "Add API Key" option (typically found in the app settings or header). Pasting your key(s) in the browser stores them locally (for your browser session or localStorage) so you can use the app without setting environment variables. This is convenient for quick testing but less secure for shared machines—do not paste production keys on shared or public computers.
+
+Browser-stored multiple API keys
+- The web UI accepts one or more API keys via the app's "Add API Key" option (useful for quick local testing). You can paste a single key or multiple keys (comma-separated or added separately) into the input.
+- Keys added through the website are stored locally in the browser (usually in localStorage) and only available on that machine and browser profile. They are not sent to any external server by default and will be lost if the user clears browser data or uses a different device or profile.
+- Security & usage notes:
+  - Storing keys in the browser is convenient for development but insecure for production — do not paste production keys on shared or public machines.
+  - Rotating or using multiple keys to intentionally bypass rate limits may violate your provider’s terms of service. Prefer contacting the provider, upgrading quotas, or using authorized server-side credentials for high throughput.
+  - If you want to use multiple keys securely for server-side requests, keep them in a server-side environment (e.g., comma-separated in GEMINI_API_KEY or API_KEY) and implement per-request selection and per-key error handling.
+
 3. Generate a quiz:
    - Enter or paste the text or prompt you want the quiz generated from.
    - Choose the number of questions and difficulty level (if available).
@@ -106,4 +172,4 @@ Specify your project license here (for example, MIT). If you don’t want to set
 
 ---
 
-This README has been updated to clarify the environment variable name(s) used for the Gemini API key, add instructions on how to obtain a Gemini API key, and explain that the API key can also be added in the browser via the Add API Key option for local testing.
+This README has been updated to clarify the environment variable name(s) used for the Gemini API key, add instructions on how to obtain a Gemini API key, explain that the API key can also be added in the browser via the Add API Key option for local testing, and document how to provide multiple API keys (comma-separated) and parse them in Node.js.
