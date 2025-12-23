@@ -376,22 +376,28 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
             )}
       </div>
 
-      {/* Modals - Simplified sizing */}
+      {/* Incomplete Quiz Alert Modal */}
       {showIncompleteAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2rem] shadow-2xl max-md w-full p-8 md:p-10 border border-zinc-200 animate-in zoom-in-95 text-center">
-                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto mb-6 border border-amber-100">
-                    <AlertTriangle className="w-8 h-8" />
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 md:p-10 border border-zinc-200 animate-in zoom-in-95 text-center">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto mb-8 border border-amber-100 shadow-sm">
+                    <AlertTriangle className="w-10 h-10" />
                 </div>
-                <h3 className="text-2xl font-black text-zinc-900 mb-4 tracking-tight">Empty Fields</h3>
-                <p className="text-zinc-500 mb-8 leading-relaxed font-medium text-base">
-                    You have <span className="text-zinc-900 font-bold">{questions.length - answeredCount} unattempted questions</span>. Proceed or go back?
+                <h3 className="text-2xl font-black text-zinc-900 mb-4 tracking-tight">Wait! Unfinished Tasks</h3>
+                <p className="text-zinc-500 mb-10 leading-relaxed font-medium text-base">
+                    You still have <span className="text-zinc-900 font-bold underline decoration-amber-400 decoration-2 underline-offset-4">{questions.length - answeredCount} unanswered questions</span>. Are you sure you want to proceed?
                 </p>
-                <div className="flex flex-col w-full gap-3">
-                    <button onClick={() => setShowIncompleteAlert(false)} className="w-full py-4 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg text-base uppercase tracking-widest">
+                <div className="flex flex-col w-full gap-4">
+                    <button 
+                        onClick={() => setShowIncompleteAlert(false)} 
+                        className="w-full py-4 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl hover:shadow-zinc-900/20 text-sm uppercase tracking-[0.15em] active:scale-95"
+                    >
                         GO BACK & ATTEMPT
                     </button>
-                    <button onClick={() => { setShowIncompleteAlert(false); setShowSubmitConfirm(true); }} className="w-full py-3 text-zinc-400 font-bold hover:text-amber-600 transition-colors uppercase tracking-widest text-[10px]">
+                    <button 
+                        onClick={() => { setShowIncompleteAlert(false); setShowSubmitConfirm(true); }} 
+                        className="w-full py-4 bg-zinc-100 text-zinc-600 border border-zinc-200 font-black rounded-2xl hover:bg-zinc-200 hover:text-zinc-900 transition-all text-sm uppercase tracking-[0.15em] active:scale-95"
+                    >
                         PROCEED REGARDLESS
                     </button>
                 </div>
@@ -399,49 +405,54 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
         </div>
       )}
 
+      {/* Standard Submit Confirmation Modal */}
       {showSubmitConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2rem] shadow-2xl max-sm w-full p-8 md:p-10 border border-zinc-200 animate-in zoom-in-95 text-center">
-                <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-900 mx-auto mb-6 border border-zinc-200">
-                    <CheckCircle2 className="w-8 h-8" />
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-sm w-full p-8 md:p-10 border border-zinc-200 animate-in zoom-in-95 text-center">
+                <div className="w-20 h-20 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-900 mx-auto mb-8 border border-zinc-200">
+                    <CheckCircle2 className="w-10 h-10" />
                 </div>
-                <h3 className="text-2xl font-black text-zinc-900 mb-3 tracking-tight">Submit Exam?</h3>
-                <p className="text-zinc-500 mb-8 leading-relaxed font-medium text-sm">
-                    Results are saved automatically in your history. Finalize now?
+                <h3 className="text-2xl font-black text-zinc-900 mb-4 tracking-tight">Final Submission</h3>
+                <p className="text-zinc-500 mb-10 leading-relaxed font-medium text-sm">
+                    Ready to lock in your answers? You can review them in your history later.
                 </p>
-                <div className="flex flex-col w-full gap-3">
-                    <button onClick={handleSubmit} className="w-full py-4 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-lg text-base uppercase tracking-widest">CONFIRM SUBMIT</button>
-                    <button onClick={() => setShowSubmitConfirm(false)} className="w-full py-3 text-zinc-400 font-bold hover:text-zinc-900 transition-colors uppercase tracking-widest text-[10px]">BACK TO EXAM</button>
+                <div className="flex flex-col w-full gap-4">
+                    <button onClick={handleSubmit} className="w-full py-4 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl text-sm uppercase tracking-widest active:scale-95">CONFIRM SUBMIT</button>
+                    <button onClick={() => setShowSubmitConfirm(false)} className="w-full py-3 bg-white text-zinc-400 font-bold hover:text-zinc-900 transition-colors uppercase tracking-widest text-[10px]">CANCEL</button>
                 </div>
             </div>
         </div>
       )}
 
+      {/* Exit Confirmation Modal */}
       {showCancelConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white rounded-[2rem] shadow-2xl max-sm w-full p-8 md:p-10 border border-zinc-200 animate-in zoom-in-95 text-center">
-                <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 mx-auto mb-6 border border-zinc-100">
-                    <LogOut className="w-6 h-6" />
+            <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-10 md:p-12 border border-zinc-200 animate-in zoom-in-95 text-center">
+                <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 mx-auto mb-8 border border-zinc-100">
+                    <LogOut className="w-8 h-8" />
                 </div>
-                <h3 className="text-2xl font-black text-zinc-900 mb-3 tracking-tight">Leave Quiz?</h3>
-                <p className="text-zinc-500 mb-8 leading-relaxed font-medium text-sm">
-                    Save session to continue later?
+                <h3 className="text-3xl font-black text-zinc-900 mb-4 tracking-tight">Leave Quiz?</h3>
+                <p className="text-zinc-500 mb-12 leading-relaxed font-medium text-base">
+                    Your current progress will be lost unless you save. How would you like to exit?
                 </p>
-                <div className="flex flex-col w-full gap-2">
+                <div className="flex flex-col w-full gap-4">
                     <button 
                         onClick={handleSaveAndExit}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-900 text-white font-black rounded-xl hover:bg-black transition-all shadow-lg uppercase tracking-widest text-[10px]"
+                        className="w-full flex items-center justify-center gap-3 py-4 bg-zinc-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-2xl shadow-zinc-900/20 uppercase tracking-[0.1em] text-sm active:scale-95"
                     >
-                        <Save className="w-3.5 h-3.5" /> Save & Exit
+                        <Save className="w-5 h-5" /> SAVE & EXIT
                     </button>
                     <button 
                         onClick={handleDiscardAndExit}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-white text-red-600 border border-red-100 font-black rounded-xl hover:bg-red-50 transition-all uppercase tracking-widest text-[10px]"
+                        className="w-full flex items-center justify-center gap-3 py-4 bg-white text-red-600 border-2 border-red-100 font-black rounded-2xl hover:bg-red-50 hover:border-red-200 transition-all uppercase tracking-[0.1em] text-sm active:scale-95"
                     >
-                        <Trash2 className="w-3.5 h-3.5" /> Discard
+                        <Trash2 className="w-5 h-5" /> DISCARD PROGRESS
                     </button>
-                    <button onClick={() => setShowCancelConfirm(false)} className="w-full py-2 text-zinc-400 font-bold hover:text-zinc-900 transition-colors uppercase tracking-widest text-[9px] mt-2">
-                        Stay
+                    <button 
+                        onClick={() => setShowCancelConfirm(false)} 
+                        className="w-full py-4 bg-zinc-100 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 font-black rounded-2xl transition-all uppercase tracking-[0.1em] text-sm mt-2 active:scale-95"
+                    >
+                        STAY IN EXAM
                     </button>
                 </div>
             </div>

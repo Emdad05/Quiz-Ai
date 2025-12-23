@@ -105,18 +105,30 @@ export const generateQuizFromContent = async (config: QuizConfig): Promise<Gener
     ? "Generate True/False questions only. Options must be ['True', 'False']." 
     : "Generate Multiple Choice questions with exactly 4 options and one correct answer.";
 
-  const systemInstruction = `You are an expert educational content creator. 
+  // Generate isolation metadata to prevent cross-user data leakage and bust caching layers
+  const requestId = crypto.randomUUID();
+  const timestamp = new Date().toISOString();
+
+  const systemInstruction = `Request Isolation ID: ${requestId}
+  Timestamp: ${timestamp}
+  You are an expert educational content creator. 
   ${config.topic ? `Use title: "${config.topic}".` : "Generate a relevant title."}
   Generate ${config.questionCount} questions.
   Type: ${config.quizType}. ${typeSpecificInstruction}
   Difficulty: ${config.difficulty}. ${difficultyPrompt[config.difficulty]}
   
   Rules:
-  1. Base questions strictly on provided content.
+  1. Base questions strictly on the provided content parts in this specific request.
   2. Explanation should be educational with **bold** key phrases.
-  3. Return raw JSON strictly following the schema.`;
+  3. Return raw JSON strictly following the schema.
+  4. CRITICAL: This is a standalone, isolated request. Do not use or reference any previous context, history, or cached data from other users or sessions.`;
 
   const parts: any[] = [];
+  
+  // Inject the unique Request ID as the first part to ensure the total request body hash is globally unique.
+  // This effectively busts any CDN or Edge caching keyed by the request body.
+  parts.push({ text: `UNIQUE_SESSION_IDENTIFIER: ${requestId} [${timestamp}]` });
+
   if (config.content) parts.push({ text: config.content });
   config.fileUploads.forEach(file => {
     const cleanBase64 = file.data.split(',')[1] || file.data;

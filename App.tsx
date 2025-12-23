@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import SetupForm from './components/SetupForm';
 import QuizInterface from './components/QuizInterface';
@@ -35,13 +36,13 @@ const App: React.FC = () => {
 
   // Handle body overflow for all modals
   useEffect(() => {
-    if (showContactModal || criticalErrorLogs) {
+    if (showContactModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [showContactModal, criticalErrorLogs]);
+  }, [showContactModal]);
 
   useEffect(() => {
     try {
@@ -129,10 +130,11 @@ const App: React.FC = () => {
       if (msg.includes("CRITICAL_FAILURE_LOGS::")) {
           const logs = msg.split("CRITICAL_FAILURE_LOGS::")[1];
           setCriticalErrorLogs(logs);
+          // Stay on GENERATING state so LoadingSpinner can show the error
       } else {
           setError(msg || "Failed to generate quiz. Please check your connection and try again.");
+          setAppState('SETUP');
       }
-      setAppState('SETUP');
     }
   };
 
@@ -157,6 +159,7 @@ const App: React.FC = () => {
     setQuestions([]);
     setResult(null);
     setError(null);
+    setCriticalErrorLogs(null);
     localStorage.removeItem('quiz_session');
     localStorage.removeItem('quiz_progress');
   };
@@ -262,7 +265,17 @@ const App: React.FC = () => {
       window.open(`mailto:emdadhussain840@gmail.com?subject=${subject}&body=${body}`);
   };
 
-  if (appState === 'GENERATING') return <LoadingSpinner apiSourceLog={apiSourceLog} />;
+  if (appState === 'GENERATING') {
+    return (
+      <LoadingSpinner 
+        apiSourceLog={apiSourceLog} 
+        errorLogs={criticalErrorLogs}
+        onGoToApi={() => { setCriticalErrorLogs(null); setAppState('API_MANAGEMENT'); }}
+        onReport={handleReportIssue}
+        onCancel={() => { setCriticalErrorLogs(null); setAppState('SETUP'); }}
+      />
+    );
+  }
 
   const historyKey = localStorage.getItem('quiz_history')?.length || 'default';
   const isDarkMode = ['LANDING', 'SETUP', 'GENERATING', 'API_MANAGEMENT', 'HOW_TO_USE'].includes(appState);
@@ -291,43 +304,14 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Critical Admin Report Dialog */}
-      {criticalErrorLogs && (
-         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in">
-             <div className="bg-zinc-900 border border-red-900/50 rounded-2xl shadow-2xl max-w-lg w-full p-8 relative overflow-hidden">
-                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-orange-600"></div>
-                 <div className="flex flex-col items-center text-center mb-6">
-                     <div className="w-20 h-20 bg-red-900/20 rounded-full flex items-center justify-center mb-4 ring-1 ring-red-500/30">
-                         <ShieldAlert className="w-10 h-10 text-red-500 animate-pulse" />
-                     </div>
-                     <h2 className="text-2xl font-bold text-white mb-2">System Capacity Exhausted</h2>
-                     <p className="text-zinc-400 text-sm leading-relaxed">
-                         All available AI models and API keys are currently rate-limited or unavailable.
-                     </p>
-                 </div>
-                 <div className="bg-zinc-950 rounded-lg p-4 border border-zinc-800 mb-6 max-h-32 overflow-y-auto">
-                     <code className="text-xs text-red-300 font-mono block whitespace-pre-wrap break-all">
-                         {criticalErrorLogs.substring(0, 500)}...
-                     </code>
-                 </div>
-                 <div className="flex flex-col gap-3">
-                     <button onClick={handleReportIssue} className="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-                         <Mail className="w-5 h-5" /> Report to Admin
-                     </button>
-                     <button onClick={() => setCriticalErrorLogs(null)} className="w-full py-3 text-zinc-500 hover:text-white font-medium">Dismiss</button>
-                 </div>
-             </div>
-         </div>
-      )}
-
-      {/* Global Contact Modal - Guaranteed to be centered regardless of parent transforms */}
+      {/* Global Contact Modal */}
       {showContactModal && (
         <div 
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden"
           onClick={() => setShowContactModal(false)}
         >
           <div 
-            className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden relative animate-in zoom-in-95 duration-300 mx-auto my-auto"
+            className="bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-md w-full overflow-hidden relative animate-in zoom-in-95 duration-300 mx-auto my-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <button 

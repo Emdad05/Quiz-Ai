@@ -1,8 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { QuizResult } from '../types';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Check, X, Minus, Download, RotateCcw, BookOpen, Trophy, FileText, RefreshCw, AlertTriangle, CheckCircle2, History } from 'lucide-react';
+import { Check, X, Minus, Download, RotateCcw, BookOpen, Trophy, FileText, RefreshCw, ChevronRight, History } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
 interface ResultsViewProps {
@@ -27,11 +26,9 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result, userName, onRetry, on
         skipped++;
       } else {
           if (q.options && q.options.length > 0) {
-              // MC/TF
               if (userAnswer === q.correctOptionIndex) correct++;
               else wrong++;
           } else {
-              // Short Answer
               const userTxt = (userAnswer as string).trim().toLowerCase();
               const correctTxt = q.answer?.trim().toLowerCase();
               if (userTxt && correctTxt && userTxt === correctTxt) correct++;
@@ -46,15 +43,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result, userName, onRetry, on
     return { correct, wrong, skipped, score, total };
   }, [result]);
 
-  const chartData = [
-    { name: 'Correct', value: stats.correct, color: '#10b981' }, 
-    { name: 'Wrong', value: stats.wrong, color: '#f43f5e' },    
-    { name: 'Skipped', value: stats.skipped, color: '#e4e4e7' }, 
-  ].filter(d => d.value > 0);
-
-  const initiateDownloadPDF = () => {
-    setShowPdfConfirm(true);
-  };
+  const initiateDownloadPDF = () => setShowPdfConfirm(true);
 
   const executeDownloadPDF = () => {
     const doc = new jsPDF();
@@ -63,261 +52,265 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result, userName, onRetry, on
     const maxLineWidth = pageWidth - margin * 2;
     let yPos = 20;
 
-    // Helper: Add consistent header to pages
-    const addPageHeader = () => {
-        doc.setFontSize(10);
-        doc.setTextColor(150, 150, 150);
-        doc.setFont("helvetica", "bold");
-        doc.text("QUIZGENIUS AI", margin, 12);
-        doc.setDrawColor(240, 240, 240);
-        doc.line(margin, 14, pageWidth - margin, 14);
-        doc.setTextColor(0, 0, 0);
+    const COLORS = {
+      primary: [37, 99, 235], // Blue-600
+      secondary: [71, 85, 105], // Zinc-600
+      success: [16, 185, 129], // Emerald-500
+      danger: [244, 63, 94], // Rose-500
+      zinc: [161, 161, 170] // Zinc-400
     };
 
-    // Helper: Handle page breaks
-    const checkPageBreak = (neededHeight: number) => {
-        if (yPos + neededHeight > 280) {
-            doc.addPage();
-            addPageHeader();
-            yPos = 25;
-            return true;
-        }
-        return false;
+    const addPageHeader = (pageTitle: string) => {
+      doc.setFillColor(249, 250, 251);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+      
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...COLORS.primary);
+      doc.text("QUIZGENIUS AI", margin, 15);
+      
+      doc.setTextColor(...COLORS.zinc);
+      doc.setFontSize(8);
+      const now = new Date();
+      doc.text(`${now.toLocaleDateString()} | ${now.toLocaleTimeString()}`, pageWidth - margin, 15, { align: 'right' });
+      
+      doc.setFontSize(18);
+      doc.setTextColor(30, 41, 59);
+      doc.text(pageTitle, margin, 30);
+      
+      doc.setDrawColor(229, 231, 235);
+      doc.line(margin, 35, pageWidth - margin, 35);
+      yPos = 50;
     };
 
-    // --- INITIAL HEADER & METADATA ---
-    addPageHeader();
-    yPos = 30;
+    const checkPageBreak = (neededHeight: number, title: string) => {
+      if (yPos + neededHeight > 280) {
+        doc.addPage();
+        addPageHeader(title);
+        return true;
+      }
+      return false;
+    };
 
-    doc.setFontSize(24);
-    doc.setFont("helvetica", "bold");
-    doc.text("Assessment Report", margin, yPos);
-    yPos += 15;
-
+    // --- FRONT PAGE: METADATA ---
+    addPageHeader("Assessment Summary");
+    
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(...COLORS.secondary);
     doc.text("QUIZ DETAILS", margin, yPos);
     yPos += 8;
     
     doc.setFont("helvetica", "normal");
-    doc.text(`Title: ${result.title || "Untitled Assessment"}`, margin, yPos);
+    doc.setTextColor(50, 50, 50);
+    doc.text(`Title: ${result.title || "Untitled Quiz"}`, margin, yPos);
     yPos += 6;
     doc.text(`Candidate: ${userName || "Anonymous User"}`, margin, yPos);
     yPos += 6;
-    doc.text(`Final Score: ${stats.score}% (${stats.correct}/${stats.total} correct)`, margin, yPos);
-    yPos += 6;
-    doc.text(`Exported At: ${new Date().toLocaleString()}`, margin, yPos);
+    doc.text(`Performance: ${stats.score}% (${stats.correct}/${stats.total} Correct)`, margin, yPos);
     yPos += 15;
 
-    doc.setDrawColor(220, 220, 220);
-    doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 12;
+    doc.setDrawColor(243, 244, 246);
+    doc.setFillColor(252, 253, 255);
+    doc.roundedRect(margin - 5, yPos - 5, maxLineWidth + 10, 25, 3, 3, 'FD');
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.primary);
+    doc.text("ANALYTICS BREAKDOWN", margin, yPos + 5);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Correct: ${stats.correct}   |   Incorrect: ${stats.wrong}   |   Skipped: ${stats.skipped}`, margin, yPos + 12);
+    yPos += 35;
 
-    // --- PART 1: QUESTIONS ---
+    // --- PART 1: ALL QUESTIONS ---
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("PART 1: QUESTIONS", margin, yPos);
-    yPos += 10;
+    doc.setTextColor(15, 23, 42);
+    doc.text("Part 1: Questions", margin, yPos);
+    yPos += 12;
 
-    doc.setFontSize(11);
     result.questions.forEach((q, i) => {
-        const qText = `${i + 1}. ${q.questionText}`;
-        const splitQ = doc.splitTextToSize(qText, maxLineWidth);
-        
-        // Estimate height for Q + Options (MCQ usually 4 options)
-        const estOptionsHeight = q.options ? q.options.length * 6 : 10;
-        checkPageBreak(splitQ.length * 6 + estOptionsHeight + 10);
+      const qText = `${i + 1}. ${q.questionText}`;
+      const splitQ = doc.splitTextToSize(qText, maxLineWidth);
+      const estHeight = (splitQ.length * 6) + (q.options ? q.options.length * 5 : 10) + 10;
+      
+      checkPageBreak(estHeight, "Part 1: Questions (Cont.)");
 
-        doc.setFont("helvetica", "bold");
-        doc.text(splitQ, margin, yPos);
-        yPos += splitQ.length * 6 + 2;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text(splitQ, margin, yPos);
+      yPos += (splitQ.length * 6) + 2;
 
-        doc.setFont("helvetica", "normal");
-        if (q.options && q.options.length > 0) {
-            q.options.forEach((opt, optIdx) => {
-                const optLabel = String.fromCharCode(65 + optIdx) + ") ";
-                const splitOpt = doc.splitTextToSize(optLabel + opt, maxLineWidth - 10);
-                doc.text(splitOpt, margin + 5, yPos);
-                yPos += splitOpt.length * 5 + 1;
-            });
-        } else {
-            doc.setTextColor(180, 180, 180);
-            doc.text("[Short Answer / Free Response]", margin + 5, yPos);
-            doc.setTextColor(0, 0, 0);
-            yPos += 7;
-        }
-        yPos += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100, 116, 139);
+      if (q.options && q.options.length > 0) {
+        q.options.forEach((opt, optIdx) => {
+          const optLabel = `${String.fromCharCode(65 + optIdx)}) `;
+          doc.text(optLabel + opt, margin + 5, yPos);
+          yPos += 5;
+        });
+      } else {
+        doc.text("[Short Answer]", margin + 5, yPos);
+        yPos += 5;
+      }
+      yPos += 8;
     });
 
-    // --- PART 2: ANSWER KEY ---
+    // --- PART 2: ANSWERS & EXPLANATIONS ---
     doc.addPage();
-    addPageHeader();
-    yPos = 30;
+    addPageHeader("Part 2: Answer Key & Insights");
 
-    doc.setFontSize(14);
-    doc.setFont("helvetica", "bold");
-    doc.text("PART 2: ANSWER KEY & EXPLANATIONS", margin, yPos);
-    yPos += 12;
-
-    doc.setFontSize(11);
     result.questions.forEach((q, i) => {
-        const header = `Question ${i + 1}`;
-        const userAnswer = result.userAnswers[q.id];
-        
-        let correctText = "";
-        let isCorrect = false;
+      const userAnswer = result.userAnswers[q.id];
+      const isCorrect = q.options && q.options.length > 0 
+        ? userAnswer === q.correctOptionIndex 
+        : (userAnswer as string)?.trim().toLowerCase() === q.answer?.trim().toLowerCase();
+      const isSkipped = userAnswer === undefined || userAnswer === "";
 
-        if (!q.options || q.options.length === 0) {
-            correctText = q.answer || "N/A";
-            isCorrect = (userAnswer as string)?.trim().toLowerCase() === q.answer?.trim().toLowerCase();
-        } else {
-            correctText = `${String.fromCharCode(65 + (q.correctOptionIndex || 0))}) ${q.options[q.correctOptionIndex || 0]}`;
-            isCorrect = userAnswer === q.correctOptionIndex;
-        }
+      let correctText = "";
+      if (q.options && q.options.length > 0) {
+        correctText = `${String.fromCharCode(65 + (q.correctOptionIndex || 0))}) ${q.options[q.correctOptionIndex || 0]}`;
+      } else {
+        correctText = q.answer || "N/A";
+      }
 
-        const cleanExpl = q.explanation.replace(/\*\*/g, '');
-        const splitExpl = doc.splitTextToSize(`Insight: ${cleanExpl}`, maxLineWidth);
-        
-        checkPageBreak(splitExpl.length * 5 + 25);
+      const explanation = q.explanation.replace(/\*\*/g, '');
+      const splitExpl = doc.splitTextToSize(`Explanation: ${explanation}`, maxLineWidth);
+      const estHeight = splitExpl.length * 5 + 35;
 
-        doc.setFont("helvetica", "bold");
-        doc.text(header, margin, yPos);
-        yPos += 6;
+      checkPageBreak(estHeight, "Part 2: Answer Key (Cont.)");
 
-        doc.setFont("helvetica", "normal");
-        // Status indicator
-        if (userAnswer === undefined || userAnswer === "") {
-            doc.setTextColor(150, 150, 150);
-            doc.text("Status: Skipped", margin, yPos);
-        } else {
-            if (isCorrect) {
-                doc.setTextColor(0, 120, 0);
-            } else {
-                doc.setTextColor(200, 0, 0);
-            }
-            doc.text(`Status: ${isCorrect ? 'Correct' : 'Incorrect'}`, margin, yPos);
-        }
-        doc.setTextColor(0, 0, 0);
-        yPos += 6;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`Question ${i + 1}`, margin, yPos);
+      yPos += 6;
 
-        doc.setFont("helvetica", "bold");
-        doc.text(`Correct Choice: ${correctText}`, margin, yPos);
-        yPos += 6;
+      if (isSkipped) {
+        doc.setTextColor(...COLORS.zinc);
+        doc.text("STATUS: SKIPPED", margin, yPos);
+      } else if (isCorrect) {
+        doc.setTextColor(...COLORS.success);
+        doc.text("STATUS: CORRECT", margin, yPos);
+      } else {
+        doc.setTextColor(...COLORS.danger);
+        doc.text("STATUS: INCORRECT", margin, yPos);
+      }
+      yPos += 6;
 
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(10);
-        doc.setTextColor(80, 80, 80);
-        doc.text(splitExpl, margin, yPos);
-        
-        yPos += splitExpl.length * 5 + 12;
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...COLORS.secondary);
+      doc.text(`Correct Answer: ${correctText}`, margin, yPos);
+      yPos += 6;
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(splitExpl, margin, yPos);
+      yPos += (splitExpl.length * 5) + 15;
     });
 
-    doc.save(`QuizGenius_Results_${Date.now()}.pdf`);
+    doc.save(`QuizGenius_Report_${Date.now()}.pdf`);
     setShowPdfConfirm(false);
   };
 
+  const getScoreColor = () => {
+    if (stats.score >= 80) return 'text-emerald-600';
+    if (stats.score >= 50) return 'text-sky-600';
+    return 'text-[#f43f5e]';
+  };
+
   return (
-    <div className="min-h-screen py-12 px-4 flex items-center justify-center bg-zinc-50 font-sans">
-      <div className="max-w-5xl w-full space-y-8">
+    <div className="min-h-screen py-4 px-4 flex items-center justify-center bg-[#FDFDFD] font-sans selection:bg-zinc-100 overflow-x-hidden">
+      <div className="max-w-2xl w-full space-y-4">
         
-        <div className="text-center">
-          <div className="inline-block p-4 rounded-full bg-white shadow-sm border border-zinc-200 mb-4">
-             <Trophy className={`w-12 h-12 ${stats.score > 70 ? 'text-sky-600' : 'text-zinc-300'}`} />
-          </div>
-          <h1 className="text-3xl font-bold text-zinc-900">{result.title || "Assessment Complete"}</h1>
-          <div className="mt-4 mb-8 space-y-2">
-            <p className="text-emerald-600 font-bold flex items-center justify-center gap-2 text-lg">
-                <CheckCircle2 className="w-5 h-5" />
-                your quizzes are saved here
-            </p>
-            <p className="text-zinc-500 font-medium flex items-center justify-center gap-2">
-                <History className="w-4 h-4" />
-                export them to pdf now to prevent data loss
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-             <button onClick={onReview} className="w-full sm:w-auto px-6 py-3 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800 shadow-md flex items-center justify-center transition-all active:scale-95">
-                <BookOpen className="w-5 h-5 mr-2" /> Review Answers
-              </button>
-             <button onClick={onReattempt} className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-900 border border-zinc-300 rounded-lg font-bold hover:bg-zinc-50 shadow-sm flex items-center justify-center transition-all active:scale-95">
-                <RefreshCw className="w-5 h-5 mr-2" /> Reattempt
-             </button>
-             <button onClick={initiateDownloadPDF} className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-900 border border-zinc-300 rounded-lg font-bold hover:bg-zinc-50 shadow-sm flex items-center justify-center transition-all active:scale-95">
-                <Download className="w-5 h-5 mr-2" /> PDF Report
-             </button>
-             <button onClick={onRetry} className="w-full sm:w-auto px-6 py-3 text-sky-600 hover:text-sky-700 font-semibold flex items-center justify-center hover:bg-sky-50 rounded-lg transition-all">
-                <RotateCcw className="w-4 h-4 mr-2" /> New Quiz
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-zinc-200 p-8 flex flex-col items-center justify-center min-h-[300px]">
-            <h2 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-6">Accuracy</h2>
-            <div className="relative w-56 h-56 flex items-center justify-center">
-              {/* Background Text (Low z-index) */}
-              <div className="absolute inset-0 flex items-center justify-center z-0">
-                <span className="text-5xl font-extrabold text-zinc-900 tracking-tight">{stats.score}%</span>
-              </div>
-              
-              {/* Chart (High z-index) - Ensures tooltip covers the text */}
-              <div className="relative z-10 w-full h-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={5} cornerRadius={5} dataKey="value" stroke="none">
-                      {chartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip 
-                        contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e4e4e7', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', opacity: 1 }}
-                        wrapperStyle={{ zIndex: 50 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+        {/* Header Section */}
+        <div className="flex items-center justify-between border-b border-zinc-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white rounded-xl shadow-sm border border-zinc-100 flex items-center justify-center">
+              <Trophy className={`w-4 h-4 ${stats.score >= 70 ? 'text-amber-500' : 'text-zinc-300'}`} />
+            </div>
+            <div>
+              <h1 className="text-sm md:text-base font-black text-zinc-900 tracking-tight leading-none">
+                {result.title || "Assessment"}
+              </h1>
+              <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-0.5">Assessment Final</p>
             </div>
           </div>
+          <button onClick={onRetry} className="text-zinc-300 hover:text-zinc-900 transition-colors p-2">
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        </div>
 
-          <div className="lg:col-span-2 flex flex-col h-full">
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 h-full">
-                <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm flex flex-col items-center justify-center text-center h-full">
-                   <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-600 mb-3"><Check className="w-5 h-5" /></div>
-                   <span className="text-3xl font-bold text-zinc-900">{stats.correct}</span>
-                   <span className="text-xs font-bold uppercase text-zinc-400 mt-1">Correct</span>
-                </div>
-                <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm flex flex-col items-center justify-center text-center h-full">
-                   <div className="w-10 h-10 bg-rose-50 rounded-full flex items-center justify-center text-rose-600 mb-3"><X className="w-5 h-5" /></div>
-                   <span className="text-3xl font-bold text-zinc-900">{stats.wrong}</span>
-                   <span className="text-xs font-bold uppercase text-zinc-400 mt-1">Incorrect</span>
-                </div>
-                <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm flex flex-col items-center justify-center text-center h-full">
-                   <div className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center text-zinc-400 mb-3"><Minus className="w-5 h-5" /></div>
-                   <span className="text-3xl font-bold text-zinc-900">{stats.skipped}</span>
-                   <span className="text-xs font-bold uppercase text-zinc-400 mt-1">Skipped</span>
-                </div>
-             </div>
+        {/* Buttons at Top */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button onClick={onReview} className="px-3 py-2.5 bg-zinc-900 text-white rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-black flex items-center justify-center gap-1.5 transition-all shadow-sm">
+            <BookOpen className="w-3.5 h-3.5 text-sky-400" /> Answers
+          </button>
+          <button onClick={initiateDownloadPDF} className="px-3 py-2.5 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-zinc-900 flex items-center justify-center gap-1.5 transition-all">
+            <Download className="w-3.5 h-3.5 text-emerald-500" /> Export PDF
+          </button>
+          <button onClick={onReattempt} className="px-3 py-2.5 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-zinc-900 flex items-center justify-center gap-1.5 transition-all">
+            <RefreshCw className="w-3.5 h-3.5 text-zinc-400" /> Reattempt
+          </button>
+          <button onClick={onRetry} className="px-3 py-2.5 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-black text-[9px] uppercase tracking-widest hover:border-zinc-900 flex items-center justify-center gap-1.5 transition-all">
+            <RotateCcw className="w-3.5 h-3.5 text-blue-500" /> New Quiz
+          </button>
+        </div>
+
+        {/* Accuracy Section */}
+        <div className="bg-white rounded-3xl border border-zinc-100 p-8 flex flex-col items-center justify-center shadow-sm min-h-[180px]">
+          <div className="text-center">
+            <span className={`text-6xl md:text-7xl font-black tracking-tighter ${getScoreColor()}`}>
+              {stats.score}%
+            </span>
+            <div className="text-[10px] font-black text-zinc-300 uppercase tracking-[0.3em] mt-2">Overall Accuracy</div>
           </div>
         </div>
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: 'Correct', value: stats.correct, icon: Check, bg: 'bg-emerald-50', text: 'text-emerald-500', border: 'border-emerald-100' },
+            { label: 'Wrong', value: stats.wrong, icon: X, bg: 'bg-rose-50', text: 'text-rose-500', border: 'border-rose-100' },
+            { label: 'Skipped', value: stats.skipped, icon: Minus, bg: 'bg-zinc-50', text: 'text-zinc-400', border: 'border-zinc-100' }
+          ].map((s, idx) => (
+            <div key={idx} className={`bg-white rounded-2xl p-4 border ${s.border} flex flex-col items-center justify-center text-center shadow-sm`}>
+              <div className={`w-8 h-8 ${s.bg} rounded-lg flex items-center justify-center ${s.text} mb-3`}>
+                <s.icon className="w-4 h-4" />
+              </div>
+              <span className="text-xl font-black text-zinc-900 tracking-tight leading-none mb-1">{s.value}</span>
+              <span className="text-[9px] font-black uppercase text-zinc-400 tracking-widest">{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Detailed Review Bar */}
+        <div className="bg-zinc-950 rounded-2xl p-3 flex items-center justify-between gap-3 text-white">
+          <div className="flex items-center gap-3 pl-2">
+            <History className="w-4 h-4 text-sky-400" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400">Vault Saved</span>
+          </div>
+          <button onClick={onReview} className="px-4 py-2 bg-white text-zinc-950 rounded-xl font-black text-[9px] uppercase tracking-widest hover:bg-zinc-100 flex items-center gap-1.5 transition-all active:scale-95">
+            Detailed Review <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+
       </div>
       
+      {/* PDF Confirmation Modal */}
       {showPdfConfirm && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 border border-zinc-200">
-                <div className="flex items-center gap-3 text-zinc-900 mb-4">
-                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                        <FileText className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-lg font-bold">Download Report?</h3>
-                </div>
-                <p className="text-zinc-600 mb-6 text-sm leading-relaxed">
-                    This will generate a PDF containing your results, answers, and AI-powered explanations. Do you want to proceed?
-                </p>
-                <div className="flex gap-3">
-                    <button onClick={() => setShowPdfConfirm(false)} className="flex-1 py-2.5 text-zinc-700 font-bold hover:bg-zinc-100 rounded-lg border border-zinc-200 transition-colors">Cancel</button>
-                    <button onClick={executeDownloadPDF} className="flex-1 py-2.5 bg-zinc-900 text-white font-bold hover:bg-zinc-800 rounded-lg shadow-sm transition-colors">Download</button>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[2rem] shadow-2xl max-sm w-full p-8 border border-zinc-100 text-center">
+                <FileText className="w-10 h-10 text-zinc-900 mx-auto mb-4" />
+                <h3 className="text-lg font-black text-zinc-900 mb-1">Export Report?</h3>
+                <p className="text-zinc-500 mb-6 text-[11px] font-medium leading-relaxed">Prepare a permanent copy of your results and AI explanations for offline study.</p>
+                <div className="grid grid-cols-1 gap-2">
+                    <button onClick={executeDownloadPDF} className="w-full py-3 bg-zinc-900 text-white font-black rounded-xl text-[10px] uppercase tracking-widest active:scale-95">Download PDF</button>
+                    <button onClick={() => setShowPdfConfirm(false)} className="w-full py-2 text-zinc-400 font-bold uppercase tracking-widest text-[9px]">Cancel</button>
                 </div>
             </div>
         </div>
