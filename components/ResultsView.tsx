@@ -1,8 +1,9 @@
+
 import React, { useMemo, useState } from 'react';
 import { QuizResult } from '../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { Check, X, Minus, Download, RotateCcw, BookOpen, Trophy, FileText, RefreshCw, AlertTriangle } from 'lucide-react';
-import jsPDF from 'jspdf';
+import { Check, X, Minus, Download, RotateCcw, BookOpen, Trophy, FileText, RefreshCw, AlertTriangle, CheckCircle2, History } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 interface ResultsViewProps {
   result: QuizResult;
@@ -62,99 +63,155 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result, userName, onRetry, on
     const maxLineWidth = pageWidth - margin * 2;
     let yPos = 20;
 
-    // Title
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    doc.text(result.title || "Assessment Results", margin, yPos);
-    yPos += 10;
+    // Helper: Add consistent header to pages
+    const addPageHeader = () => {
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150);
+        doc.setFont("helvetica", "bold");
+        doc.text("QUIZGENIUS AI", margin, 12);
+        doc.setDrawColor(240, 240, 240);
+        doc.line(margin, 14, pageWidth - margin, 14);
+        doc.setTextColor(0, 0, 0);
+    };
 
-    // Metadata
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Candidate: ${userName || "Anonymous"}`, margin, yPos);
-    yPos += 7;
-    doc.text(`Score: ${stats.score}% (${stats.correct}/${stats.total})`, margin, yPos);
+    // Helper: Handle page breaks
+    const checkPageBreak = (neededHeight: number) => {
+        if (yPos + neededHeight > 280) {
+            doc.addPage();
+            addPageHeader();
+            yPos = 25;
+            return true;
+        }
+        return false;
+    };
+
+    // --- INITIAL HEADER & METADATA ---
+    addPageHeader();
+    yPos = 30;
+
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.text("Assessment Report", margin, yPos);
     yPos += 15;
 
-    // Divider
-    doc.setDrawColor(200);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("QUIZ DETAILS", margin, yPos);
+    yPos += 8;
+    
+    doc.setFont("helvetica", "normal");
+    doc.text(`Title: ${result.title || "Untitled Assessment"}`, margin, yPos);
+    yPos += 6;
+    doc.text(`Candidate: ${userName || "Anonymous User"}`, margin, yPos);
+    yPos += 6;
+    doc.text(`Final Score: ${stats.score}% (${stats.correct}/${stats.total} correct)`, margin, yPos);
+    yPos += 6;
+    doc.text(`Exported At: ${new Date().toLocaleString()}`, margin, yPos);
+    yPos += 15;
+
+    doc.setDrawColor(220, 220, 220);
     doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 12;
+
+    // --- PART 1: QUESTIONS ---
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("PART 1: QUESTIONS", margin, yPos);
     yPos += 10;
 
-    // Questions
     doc.setFontSize(11);
-    
     result.questions.forEach((q, i) => {
-        // Page break check (approximate height per question block is 60-80 units)
-        if (yPos > 250) {
-            doc.addPage();
-            yPos = 20;
-        }
-
-        // Question Text
-        doc.setFont("helvetica", "bold");
         const qText = `${i + 1}. ${q.questionText}`;
         const splitQ = doc.splitTextToSize(qText, maxLineWidth);
-        doc.text(splitQ, margin, yPos);
-        yPos += splitQ.length * 5 + 3;
+        
+        // Estimate height for Q + Options (MCQ usually 4 options)
+        const estOptionsHeight = q.options ? q.options.length * 6 : 10;
+        checkPageBreak(splitQ.length * 6 + estOptionsHeight + 10);
 
-        // User Answer Logic
+        doc.setFont("helvetica", "bold");
+        doc.text(splitQ, margin, yPos);
+        yPos += splitQ.length * 6 + 2;
+
         doc.setFont("helvetica", "normal");
+        if (q.options && q.options.length > 0) {
+            q.options.forEach((opt, optIdx) => {
+                const optLabel = String.fromCharCode(65 + optIdx) + ") ";
+                const splitOpt = doc.splitTextToSize(optLabel + opt, maxLineWidth - 10);
+                doc.text(splitOpt, margin + 5, yPos);
+                yPos += splitOpt.length * 5 + 1;
+            });
+        } else {
+            doc.setTextColor(180, 180, 180);
+            doc.text("[Short Answer / Free Response]", margin + 5, yPos);
+            doc.setTextColor(0, 0, 0);
+            yPos += 7;
+        }
+        yPos += 6;
+    });
+
+    // --- PART 2: ANSWER KEY ---
+    doc.addPage();
+    addPageHeader();
+    yPos = 30;
+
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("PART 2: ANSWER KEY & EXPLANATIONS", margin, yPos);
+    yPos += 12;
+
+    doc.setFontSize(11);
+    result.questions.forEach((q, i) => {
+        const header = `Question ${i + 1}`;
         const userAnswer = result.userAnswers[q.id];
-        let answerText = "";
+        
+        let correctText = "";
         let isCorrect = false;
 
-        const isShortAnswer = !q.options || q.options.length === 0;
-
-        if (isShortAnswer) {
-            const userTxt = (userAnswer as string)?.trim() || "";
-            answerText = `Your Answer: ${userTxt || "(Skipped)"}`;
-            isCorrect = userTxt.toLowerCase() === q.answer?.trim().toLowerCase();
+        if (!q.options || q.options.length === 0) {
+            correctText = q.answer || "N/A";
+            isCorrect = (userAnswer as string)?.trim().toLowerCase() === q.answer?.trim().toLowerCase();
         } else {
-             if (userAnswer !== undefined && userAnswer !== "") {
-                 const selectedOpt = q.options[userAnswer as number];
-                 answerText = `Your Answer: ${selectedOpt}`;
-                 isCorrect = userAnswer === q.correctOptionIndex;
-             } else {
-                 answerText = "Your Answer: (Skipped)";
-                 isCorrect = false;
-             }
+            correctText = `${String.fromCharCode(65 + (q.correctOptionIndex || 0))}) ${q.options[q.correctOptionIndex || 0]}`;
+            isCorrect = userAnswer === q.correctOptionIndex;
         }
 
-        // Print User Answer
-        doc.setTextColor(isCorrect ? 0 : 200, isCorrect ? 100 : 0, 0); // Greenish if correct, Reddish if wrong
-        if (!isCorrect) doc.setTextColor(200, 0, 0); 
-        else doc.setTextColor(0, 150, 0);
+        const cleanExpl = q.explanation.replace(/\*\*/g, '');
+        const splitExpl = doc.splitTextToSize(`Insight: ${cleanExpl}`, maxLineWidth);
         
-        doc.text(answerText, margin, yPos);
+        checkPageBreak(splitExpl.length * 5 + 25);
+
+        doc.setFont("helvetica", "bold");
+        doc.text(header, margin, yPos);
         yPos += 6;
-        doc.setTextColor(0, 0, 0); // Reset color
 
-        // Correct Answer (if wrong)
-        if (!isCorrect) {
-            let correctText = "";
-            if (isShortAnswer) {
-                correctText = `Correct Answer: ${q.answer}`;
+        doc.setFont("helvetica", "normal");
+        // Status indicator
+        if (userAnswer === undefined || userAnswer === "") {
+            doc.setTextColor(150, 150, 150);
+            doc.text("Status: Skipped", margin, yPos);
+        } else {
+            if (isCorrect) {
+                doc.setTextColor(0, 120, 0);
             } else {
-                correctText = `Correct Answer: ${q.options[q.correctOptionIndex || 0]}`;
+                doc.setTextColor(200, 0, 0);
             }
-            doc.text(correctText, margin, yPos);
-            yPos += 6;
+            doc.text(`Status: ${isCorrect ? 'Correct' : 'Incorrect'}`, margin, yPos);
         }
+        doc.setTextColor(0, 0, 0);
+        yPos += 6;
 
-        // Explanation
-        yPos += 2;
+        doc.setFont("helvetica", "bold");
+        doc.text(`Correct Choice: ${correctText}`, margin, yPos);
+        yPos += 6;
+
         doc.setFont("helvetica", "italic");
         doc.setFontSize(10);
         doc.setTextColor(80, 80, 80);
-        // Clean up markdown bold markers for PDF
-        const cleanExplanation = `Explanation: ${q.explanation.replace(/\*\*/g, '')}`;
-        const splitExpl = doc.splitTextToSize(cleanExplanation, maxLineWidth);
         doc.text(splitExpl, margin, yPos);
-        yPos += splitExpl.length * 4 + 8; // Extra spacing after block
-
-        doc.setFontSize(11); // Reset size for next question
+        
+        yPos += splitExpl.length * 5 + 12;
         doc.setTextColor(0, 0, 0);
+        doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
     });
 
@@ -171,19 +228,28 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result, userName, onRetry, on
              <Trophy className={`w-12 h-12 ${stats.score > 70 ? 'text-sky-600' : 'text-zinc-300'}`} />
           </div>
           <h1 className="text-3xl font-bold text-zinc-900">{result.title || "Assessment Complete"}</h1>
-          <p className="text-zinc-500 mt-2 mb-8">Performance Summary</p>
+          <div className="mt-4 mb-8 space-y-2">
+            <p className="text-emerald-600 font-bold flex items-center justify-center gap-2 text-lg">
+                <CheckCircle2 className="w-5 h-5" />
+                your quizzes are saved here
+            </p>
+            <p className="text-zinc-500 font-medium flex items-center justify-center gap-2">
+                <History className="w-4 h-4" />
+                export them to pdf now to prevent data loss
+            </p>
+          </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-             <button onClick={onReview} className="w-full sm:w-auto px-6 py-3 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800 shadow-md flex items-center justify-center">
-                <BookOpen className="w-5 h-5 mr-2" /> Review
+             <button onClick={onReview} className="w-full sm:w-auto px-6 py-3 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800 shadow-md flex items-center justify-center transition-all active:scale-95">
+                <BookOpen className="w-5 h-5 mr-2" /> Review Answers
               </button>
-             <button onClick={onReattempt} className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-900 border border-zinc-300 rounded-lg font-bold hover:bg-zinc-50 shadow-sm flex items-center justify-center">
+             <button onClick={onReattempt} className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-900 border border-zinc-300 rounded-lg font-bold hover:bg-zinc-50 shadow-sm flex items-center justify-center transition-all active:scale-95">
                 <RefreshCw className="w-5 h-5 mr-2" /> Reattempt
              </button>
-             <button onClick={initiateDownloadPDF} className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-900 border border-zinc-300 rounded-lg font-bold hover:bg-zinc-50 shadow-sm flex items-center justify-center">
+             <button onClick={initiateDownloadPDF} className="w-full sm:w-auto px-6 py-3 bg-white text-zinc-900 border border-zinc-300 rounded-lg font-bold hover:bg-zinc-50 shadow-sm flex items-center justify-center transition-all active:scale-95">
                 <Download className="w-5 h-5 mr-2" /> PDF Report
              </button>
-             <button onClick={onRetry} className="w-full sm:w-auto px-6 py-3 text-sky-600 hover:text-sky-700 font-semibold flex items-center justify-center hover:bg-sky-50 rounded-lg">
+             <button onClick={onRetry} className="w-full sm:w-auto px-6 py-3 text-sky-600 hover:text-sky-700 font-semibold flex items-center justify-center hover:bg-sky-50 rounded-lg transition-all">
                 <RotateCcw className="w-4 h-4 mr-2" /> New Quiz
             </button>
           </div>

@@ -137,6 +137,8 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
 
   const checkCompletion = () => {
     const answeredCount = Object.keys(answers).length;
+    if (answeredCount === 0) return; // Should be handled by button disabled state anyway
+    
     if (answeredCount < questions.length) {
       setShowIncompleteAlert(true);
     } else {
@@ -164,6 +166,7 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
 
   const answeredCount = Object.keys(answers).length;
   const isLastQuestion = currentIndex === questions.length - 1;
+  const hasNoAnswers = answeredCount === 0;
 
   return (
     <div className="min-h-screen bg-[#FDFDFD] flex flex-col font-sans selection:bg-zinc-200 text-zinc-900">
@@ -180,7 +183,7 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
              <div className="font-black text-xl tracking-tighter text-zinc-900 select-none hidden xs:block">QUIZ<span className="text-zinc-400 font-light">GENIUS</span></div>
           </div>
 
-          {/* Centralized Text-Based Navigation (Alive even on last question) */}
+          {/* Centralized Text-Based Navigation */}
           <div className="hidden sm:flex items-center bg-zinc-100 rounded-2xl p-1 gap-1 border border-zinc-200">
             <button
               onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
@@ -203,16 +206,18 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
             </button>
           </div>
 
-          {/* Action Area: Submit Button (Relocated and Enhanced) & Timer */}
+          {/* Action Area: Submit Button & Timer */}
           <div className="flex items-center gap-3">
-             {/* Enhanced Submit Button at Top */}
+             {/* Submit Button at Top - Disabled until at least one answer exists */}
              <button 
                 onClick={checkCompletion}
-                className="group relative flex items-center gap-2 bg-zinc-900 text-white px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 overflow-hidden"
+                disabled={hasNoAnswers}
+                title={hasNoAnswers ? "Answer at least one question to finish" : "Finish Assessment"}
+                className={`group relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 overflow-hidden ${hasNoAnswers ? 'bg-zinc-200 text-zinc-400 cursor-not-allowed shadow-none' : 'bg-zinc-900 text-white hover:bg-black'}`}
              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                {!hasNoAnswers && <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />}
                 <span className="relative z-10 flex items-center gap-2">
-                    FINISH <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                    FINISH <CheckCircle2 className={`w-3.5 h-3.5 ${hasNoAnswers ? 'text-zinc-300' : 'text-blue-400'}`} />
                 </span>
              </button>
 
@@ -237,7 +242,7 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
       </header>
 
       <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8 flex flex-col md:flex-row gap-10">
-        {/* Mobile Overlay (Closes Sidebar on Click) */}
+        {/* Mobile Overlay */}
         {isSidebarOpen && (
             <div 
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 md:hidden animate-in fade-in" 
@@ -336,7 +341,7 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
               )}
             </div>
 
-            {/* Bottom Navigation Area (Keeps Prev/Next Alive) */}
+            {/* Bottom Navigation Area */}
             <div ref={navAreaRef} className="mt-14 pt-10 border-t border-zinc-100 flex flex-col items-center">
                  <div className="flex w-full items-center justify-between gap-4">
                     <button 
@@ -363,7 +368,9 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
                         <p className="text-[11px] text-zinc-400 font-medium mb-2">Ready to see your results?</p>
                         <button 
                           onClick={checkCompletion}
-                          className="px-10 py-3 bg-zinc-900 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                          disabled={hasNoAnswers}
+                          title={hasNoAnswers ? "Answer at least one question to submit" : "Submit Assessment"}
+                          className={`px-10 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-3 ${hasNoAnswers ? 'bg-zinc-100 text-zinc-300 cursor-not-allowed shadow-none' : 'bg-zinc-900 text-white shadow-xl hover:scale-105 active:scale-95'}`}
                         >
                            Submit Assessment <ArrowRight className="w-4 h-4" />
                         </button>
@@ -374,24 +381,24 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
         </div>
       </main>
 
-      {/* Incomplete Questions Alert */}
+      {/* Incomplete Questions Alert - Updated with explicit counts and prompt phrasing */}
       {showIncompleteAlert && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-xl animate-in fade-in duration-300">
-            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
-                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center text-red-500 mx-auto mb-8 border border-red-100 ring-8 ring-red-50/50">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-md w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
+                <div className="w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center text-amber-500 mx-auto mb-8 border border-amber-100 ring-8 ring-amber-50/50">
                     <AlertTriangle className="w-10 h-10" />
                 </div>
-                <h3 className="text-3xl font-black text-zinc-900 mb-6 tracking-tight">Wait! Unanswered Questions</h3>
+                <h3 className="text-3xl font-black text-zinc-900 mb-6 tracking-tight">Wait! Empty Fields</h3>
                 <p className="text-zinc-500 mb-10 leading-relaxed font-medium text-lg">
-                    You have <span className="text-zinc-900 font-bold">{questions.length - answeredCount} questions</span> left blank. 
-                    Would you like to review them or submit your current progress?
+                    You have <span className="text-zinc-900 font-bold">{questions.length - answeredCount} unattempted questions</span>. 
+                    Do you want to proceed without attempting or wanna go back and attempt them?
                 </p>
                 <div className="flex flex-col w-full gap-4">
                     <button onClick={() => setShowIncompleteAlert(false)} className="w-full py-5 bg-zinc-900 text-white font-black rounded-3xl hover:bg-black transition-all shadow-xl text-lg uppercase tracking-widest">
-                        GO BACK & FINISH
+                        GO BACK & ATTEMPT
                     </button>
-                    <button onClick={() => { setShowIncompleteAlert(false); setShowSubmitConfirm(true); }} className="w-full py-4 text-zinc-400 font-bold hover:text-red-500 transition-colors uppercase tracking-widest text-xs">
-                        SUBMIT ANYWAY
+                    <button onClick={() => { setShowIncompleteAlert(false); setShowSubmitConfirm(true); }} className="w-full py-4 text-zinc-400 font-bold hover:text-amber-600 transition-colors uppercase tracking-widest text-xs">
+                        PROCEED WITHOUT ATTEMPTING
                     </button>
                 </div>
             </div>
@@ -401,13 +408,13 @@ const QuizInterface: React.FC<QuizInterfaceProps> = ({ questions, durationMinute
       {/* Submit Confirmation Modal */}
       {showSubmitConfirm && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-md animate-in fade-in duration-300">
-            <div className="bg-white rounded-[3rem] shadow-2xl max-w-md w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
+            <div className="bg-white rounded-[3rem] shadow-2xl max-md w-full p-12 border border-zinc-200 animate-in zoom-in-95 duration-300 text-center">
                 <div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-900 mx-auto mb-8 border border-zinc-200">
                     <CheckCircle2 className="w-10 h-10" />
                 </div>
                 <h3 className="text-3xl font-black text-zinc-900 mb-4 tracking-tight">Submit Exam?</h3>
                 <p className="text-zinc-500 mb-10 leading-relaxed font-medium">
-                    Are you ready to finalize your work? You won't be able to change your answers after this.
+                    Your results will be saved automatically in your history. Are you ready to finalize your work?
                 </p>
                 <div className="flex flex-col w-full gap-4">
                     <button onClick={handleSubmit} className="w-full py-5 bg-zinc-900 text-white font-black rounded-3xl hover:bg-black transition-all shadow-xl text-lg uppercase tracking-widest">CONFIRM SUBMIT</button>

@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { QuizConfig, Difficulty, QuizType, QuizResult } from '../types';
 import { BrainCircuit, ImagePlus, ArrowRight, AlertCircle, History, Loader2, PlayCircle, X, Sparkles, FileType, FileImage, FileText, CheckCircle2, BookmarkCheck } from 'lucide-react';
@@ -36,7 +37,11 @@ const SetupForm: React.FC<SetupFormProps> = ({
   const [fileItems, setFileItems] = useState<FileItem[]>([]);
   const [nameError, setNameError] = useState('');
   const [contentError, setContentError] = useState('');
-  const [hasIncompleteQuiz, setHasIncompleteQuiz] = useState(false);
+  
+  const [inProgressCount, setInProgressCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
+  const [hasNewSaves, setHasNewSaves] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const contentSectionRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +56,12 @@ const SetupForm: React.FC<SetupFormProps> = ({
     if (savedName) setUserName(savedName);
     try {
         const history: QuizResult[] = JSON.parse(localStorage.getItem('quiz_history') || '[]');
-        setHasIncompleteQuiz(history.some(q => q.status === 'IN_PROGRESS'));
+        const ip = history.filter(q => q.status === 'IN_PROGRESS').length;
+        const cp = history.filter(q => q.status === 'COMPLETED').length;
+        setInProgressCount(ip);
+        setCompletedCount(cp);
+        // Highlight history button if there are incomplete assessments or if we just detected an interruption
+        setHasNewSaves(ip > 0 || (showResumeNotification ?? false));
     } catch(e) {}
   }, [showResumeNotification]);
 
@@ -71,26 +81,17 @@ const SetupForm: React.FC<SetupFormProps> = ({
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Robust keyboard dismissal
   useEffect(() => {
     const handleInteraction = (e: MouseEvent | TouchEvent) => {
       const target = e.target as HTMLElement;
-      
-      // If the user touches/clicks an input, its label, or a button, do nothing
-      if (target.closest('input, textarea, button, label, select, [role="button"]')) {
-        return;
-      }
-
-      // If we touch the background, blur whatever is active to hide the keyboard
+      if (target.closest('input, textarea, button, label, select, [role="button"]')) return;
       const activeEl = document.activeElement;
       if (activeEl instanceof HTMLTextAreaElement || activeEl instanceof HTMLInputElement) {
         activeEl.blur();
       }
     };
-
     window.addEventListener('mousedown', handleInteraction);
     window.addEventListener('touchstart', handleInteraction, { passive: true });
-
     return () => {
       window.removeEventListener('mousedown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
@@ -191,18 +192,33 @@ const SetupForm: React.FC<SetupFormProps> = ({
         {showResumeNotification && (
           <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
               <div className="bg-zinc-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-zinc-800 text-center animate-in zoom-in-95 duration-300">
-                  <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
-                      <BookmarkCheck className="w-8 h-8 text-amber-500" />
+                  <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
+                      <BookmarkCheck className="w-8 h-8 text-blue-400" />
                   </div>
-                  <h3 className="text-2xl font-black text-white mb-3">Quiz Saved!</h3>
-                  <p className="text-zinc-400 text-sm leading-relaxed mb-8">
-                      We found an unfinished assessment. Your progress has been safely stored in your <strong>History</strong>.
-                  </p>
+                  <h3 className="text-2xl font-black text-white mb-3">Quizzes Saved!</h3>
+                  <div className="space-y-4 mb-8">
+                    <div className="p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800 flex flex-col gap-2">
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-500 font-bold uppercase tracking-wider">completed quiz</span>
+                            <span className="text-emerald-400 font-black">{completedCount}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-500 font-bold uppercase tracking-wider">incompleted quiz</span>
+                            <span className="text-amber-400 font-black">{inProgressCount}</span>
+                        </div>
+                    </div>
+                    <p className="text-zinc-400 text-sm leading-relaxed">
+                        We found your assessment history. Your progress is safely stored and available in your <strong>History</strong>.
+                    </p>
+                  </div>
                   <button 
-                    onClick={onDismissNotification} 
+                    onClick={() => {
+                        onDismissNotification?.();
+                        onViewHistory();
+                    }} 
                     className="w-full bg-white text-zinc-950 font-bold py-4 rounded-2xl hover:bg-zinc-100 transition-all shadow-xl active:scale-95"
                   >
-                      Got it, thanks!
+                      Explore History
                   </button>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-4 font-bold">Check the History button above</p>
               </div>
@@ -213,11 +229,11 @@ const SetupForm: React.FC<SetupFormProps> = ({
           <div className="flex items-center gap-3">
             <button 
                 onClick={onViewHistory} 
-                className={`flex items-center text-sm font-bold px-5 py-2.5 rounded-full transition-all border relative ${hasIncompleteQuiz ? 'bg-amber-500 text-zinc-950 border-amber-400 pulse-highlight' : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800'}`}
+                className={`flex items-center text-sm font-bold px-5 py-2.5 rounded-full transition-all border relative ${hasNewSaves ? 'bg-amber-500 text-zinc-950 border-amber-400 pulse-highlight' : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800'}`}
             >
-              <History className={`w-4 h-4 mr-2 ${hasIncompleteQuiz ? 'animate-spin-slow' : ''}`} /> 
+              <History className={`w-4 h-4 mr-2 ${hasNewSaves ? 'animate-spin-slow' : ''}`} /> 
               History
-              {hasIncompleteQuiz && (
+              {hasNewSaves && (
                   <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-zinc-950"></span>
               )}
             </button>
@@ -307,7 +323,7 @@ const SetupForm: React.FC<SetupFormProps> = ({
                       let activeStyle = '';
                       if (isActive) {
                         if (d === Difficulty.EASY) activeStyle = 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]';
-                        else if (d === Difficulty.MEDIUM) activeStyle = 'bg-amber-500 text-zinc-950 shadow-[0_0_15px_rgba(245,158,11,0.3)]';
+                        else if (d === Difficulty.MEDIUM) activeStyle = 'bg-amber-50 text-zinc-950 shadow-[0_0_15px_rgba(245,158,11,0.3)]';
                         else if (d === Difficulty.HARD) activeStyle = 'bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.3)]';
                       }
                       return (
