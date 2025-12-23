@@ -412,6 +412,7 @@ const App: React.FC = () => {
           onRetry={resetApp} 
           onReview={() => setAppState('REVIEW')}
           onReattempt={handleReattempt}
+          onHistory={() => setAppState('HISTORY')}
         />
       )}
 

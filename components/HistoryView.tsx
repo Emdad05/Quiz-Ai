@@ -77,7 +77,7 @@ const HistoryView: React.FC<HistoryViewProps> = ({ onBack, onSelectResult, onCle
         doc.setFontSize(10);
         doc.setTextColor(150, 150, 150);
         doc.setFont("helvetica", "bold");
-        doc.text("QUIZGENIUS AI", margin, 12);
+        doc.text("QUIZGENIUS AI - ARCHIVE REPORT", margin, 12);
         doc.setDrawColor(240, 240, 240);
         doc.line(margin, 14, pageWidth - margin, 14);
         doc.setTextColor(0, 0, 0);
@@ -93,125 +93,134 @@ const HistoryView: React.FC<HistoryViewProps> = ({ onBack, onSelectResult, onCle
         return false;
     };
 
+    // PAGE 1: HEADER & INFO
     addPageHeader();
     yPos = 30;
-
-    doc.setFontSize(24);
+    doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.text("Assessment Report", margin, yPos);
     yPos += 15;
 
     doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text("QUIZ DETAILS", margin, yPos);
+    doc.setTextColor(100, 100, 100);
+    doc.text("SUMMARY INFORMATION", margin, yPos);
     yPos += 8;
     
+    doc.setTextColor(0, 0, 0);
     doc.setFont("helvetica", "normal");
     doc.text(`Title: ${result.title || "Untitled Assessment"}`, margin, yPos);
     yPos += 6;
     doc.text(`Candidate: ${localStorage.getItem('quiz_username') || "User"}`, margin, yPos);
     yPos += 6;
-    doc.text(`Final Score: ${stats.score}% (${stats.correct}/${stats.total} correct)`, margin, yPos);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Final Score: ${stats.score}% (${stats.correct}/${stats.total} Correct)`, margin, yPos);
+    doc.setFont("helvetica", "normal");
     yPos += 6;
     doc.text(`Generated At: ${new Date(result.timestamp).toLocaleString()}`, margin, yPos);
     yPos += 15;
 
-    doc.setDrawColor(220, 220, 220);
+    doc.setDrawColor(230, 230, 230);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 12;
+    yPos += 15;
 
+    // PART 1: QUESTIONS ONLY
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("PART 1: QUESTIONS", margin, yPos);
     yPos += 10;
-
     doc.setFontSize(11);
+
     result.questions.forEach((q, i) => {
         const qText = `${i + 1}. ${q.questionText}`;
         const splitQ = doc.splitTextToSize(qText, maxLineWidth);
-        const estOptionsHeight = q.options ? q.options.length * 6 : 10;
-        checkPageBreak(splitQ.length * 6 + estOptionsHeight + 10);
-
+        const optSpace = q.options ? q.options.length * 7 : 12;
+        
+        checkPageBreak(splitQ.length * 6 + optSpace + 10);
+        
         doc.setFont("helvetica", "bold");
         doc.text(splitQ, margin, yPos);
-        yPos += splitQ.length * 6 + 2;
+        yPos += splitQ.length * 6 + 3;
 
         doc.setFont("helvetica", "normal");
         if (q.options && q.options.length > 0) {
             q.options.forEach((opt, optIdx) => {
-                const optLabel = String.fromCharCode(65 + optIdx) + ") ";
+                const optLabel = `${String.fromCharCode(65 + optIdx)}) `;
                 const splitOpt = doc.splitTextToSize(optLabel + opt, maxLineWidth - 10);
                 doc.text(splitOpt, margin + 5, yPos);
-                yPos += splitOpt.length * 5 + 1;
+                yPos += splitOpt.length * 5 + 2;
             });
         } else {
-            doc.setTextColor(180, 180, 180);
-            doc.text("[Short Answer / Free Response]", margin + 5, yPos);
+            doc.setTextColor(150, 150, 150);
+            doc.text("   [Short Answer Response Field]", margin, yPos);
             doc.setTextColor(0, 0, 0);
-            yPos += 7;
+            yPos += 8;
         }
-        yPos += 6;
+        yPos += 5;
     });
 
+    // PART 2: ANSWERS & EXPLANATIONS (Mandatory new page)
     doc.addPage();
     addPageHeader();
     yPos = 30;
-
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text("PART 2: ANSWER KEY & EXPLANATIONS", margin, yPos);
     yPos += 12;
 
-    doc.setFontSize(11);
     result.questions.forEach((q, i) => {
-        const header = `Question ${i + 1}`;
         const userAnswer = result.userAnswers[q.id];
-        let correctText = "";
+        let correctStr = "";
         let isCorrect = false;
 
-        if (!q.options || q.options.length === 0) {
-            correctText = q.answer || "N/A";
-            isCorrect = (userAnswer as string)?.trim().toLowerCase() === q.answer?.trim().toLowerCase();
-        } else {
-            correctText = `${String.fromCharCode(65 + (q.correctOptionIndex || 0))}) ${q.options[q.correctOptionIndex || 0]}`;
+        if (q.options && q.options.length > 0) {
+            correctStr = `${String.fromCharCode(65 + q.correctOptionIndex!)}: ${q.options[q.correctOptionIndex!]}`;
             isCorrect = userAnswer === q.correctOptionIndex;
+        } else {
+            correctStr = q.answer || "N/A";
+            isCorrect = (userAnswer as string)?.trim().toLowerCase() === q.answer?.trim().toLowerCase();
         }
 
-        const cleanExpl = q.explanation.replace(/\*\*/g, '');
-        const splitExpl = doc.splitTextToSize(`Insight: ${cleanExpl}`, maxLineWidth);
-        checkPageBreak(splitExpl.length * 5 + 25);
+        const explClean = q.explanation.replace(/\*\*/g, '');
+        const splitExpl = doc.splitTextToSize(`Explanation: ${explClean}`, maxLineWidth);
+        
+        checkPageBreak(splitExpl.length * 5 + 30);
 
         doc.setFont("helvetica", "bold");
-        doc.text(header, margin, yPos);
+        doc.setFontSize(11);
+        doc.text(`Question ${i + 1}`, margin, yPos);
         yPos += 6;
 
-        doc.setFont("helvetica", "normal");
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
         if (userAnswer === undefined || userAnswer === "") {
             doc.setTextColor(150, 150, 150);
-            doc.text("Status: Skipped", margin, yPos);
+            doc.text("STATUS: SKIPPED", margin, yPos);
         } else {
-            if (isCorrect) doc.setTextColor(0, 120, 0);
-            else doc.setTextColor(200, 0, 0);
-            doc.text(`Status: ${isCorrect ? 'Correct' : 'Incorrect'}`, margin, yPos);
+            if (isCorrect) {
+                doc.setTextColor(0, 128, 0);
+                doc.text("STATUS: CORRECT", margin, yPos);
+            } else {
+                doc.setTextColor(200, 0, 0);
+                doc.text("STATUS: INCORRECT", margin, yPos);
+            }
         }
         doc.setTextColor(0, 0, 0);
         yPos += 6;
 
         doc.setFont("helvetica", "bold");
-        doc.text(`Correct Choice: ${correctText}`, margin, yPos);
+        doc.text(`CORRECT ANSWER: ${correctStr}`, margin, yPos);
         yPos += 6;
 
         doc.setFont("helvetica", "italic");
-        doc.setFontSize(10);
-        doc.setTextColor(80, 80, 80);
+        doc.setTextColor(60, 60, 60);
         doc.text(splitExpl, margin, yPos);
         yPos += splitExpl.length * 5 + 12;
+        
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
     });
 
-    doc.save(`QuizGenius_Archive_${result.id.substring(0, 8)}.pdf`);
+    doc.save(`QuizGenius_Archive_${result.title.replace(/\s+/g, '_')}_${result.id.substring(0, 8)}.pdf`);
     setExportConfirmResult(null);
   };
 
