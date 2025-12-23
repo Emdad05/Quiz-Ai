@@ -84,7 +84,4 @@ Security & monitoring
 - Use server-side rate limiting and retries to handle transient errors.
 
 Contributing
-Contributions welcome — open issues for bugs or feature requests and submit pull requests for fixes or enhancements.
-
-License
-(If applicable) Add a LICENSE file to the repository.
+Contributions welcome — open issues for bugs or feature requests and submit pull requests for fixes or enhancements.🗿
