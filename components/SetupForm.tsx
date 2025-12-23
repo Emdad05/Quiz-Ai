@@ -60,7 +60,6 @@ const SetupForm: React.FC<SetupFormProps> = ({
         const cp = history.filter(q => q.status === 'COMPLETED').length;
         setInProgressCount(ip);
         setCompletedCount(cp);
-        // Highlight history button if there are incomplete assessments or if we just detected an interruption
         setHasNewSaves(ip > 0 || (showResumeNotification ?? false));
     } catch(e) {}
   }, [showResumeNotification]);
@@ -188,113 +187,101 @@ const SetupForm: React.FC<SetupFormProps> = ({
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-900/10 rounded-full blur-[100px]"></div>
           <div className="absolute inset-0 spotlight-overlay"></div>
       </div>
-      <div className="relative z-10 max-w-5xl mx-auto px-4 py-8 font-sans">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-4 md:py-8 font-sans">
         {showResumeNotification && (
           <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-              <div className="bg-zinc-900 rounded-3xl shadow-2xl max-w-sm w-full p-8 border border-zinc-800 text-center animate-in zoom-in-95 duration-300">
-                  <div className="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-blue-500/20">
-                      <BookmarkCheck className="w-8 h-8 text-blue-400" />
+              <div className="bg-zinc-900 rounded-2xl shadow-2xl max-w-sm w-full p-6 md:p-8 border border-zinc-800 text-center animate-in zoom-in-95 duration-300">
+                  <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/20">
+                      <BookmarkCheck className="w-6 h-6 text-blue-400" />
                   </div>
-                  <h3 className="text-2xl font-black text-white mb-3">Quizzes Saved!</h3>
-                  <div className="space-y-4 mb-8">
-                    <div className="p-4 bg-zinc-950/50 rounded-2xl border border-zinc-800 flex flex-col gap-2">
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-500 font-bold uppercase tracking-wider">completed quiz</span>
+                  <h3 className="text-xl font-black text-white mb-2">Quizzes Saved!</h3>
+                  <div className="space-y-3 mb-6">
+                    <div className="p-3 bg-zinc-950/50 rounded-xl border border-zinc-800 flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-zinc-500 font-bold uppercase tracking-wider">completed</span>
                             <span className="text-emerald-400 font-black">{completedCount}</span>
                         </div>
-                        <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-500 font-bold uppercase tracking-wider">incompleted quiz</span>
+                        <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-zinc-500 font-bold uppercase tracking-wider">in progress</span>
                             <span className="text-amber-400 font-black">{inProgressCount}</span>
                         </div>
                     </div>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                        We found your assessment history. Your progress is safely stored and available in your <strong>History</strong>.
-                    </p>
                   </div>
                   <button 
                     onClick={() => {
                         onDismissNotification?.();
                         onViewHistory();
                     }} 
-                    className="w-full bg-white text-zinc-950 font-bold py-4 rounded-2xl hover:bg-zinc-100 transition-all shadow-xl active:scale-95"
+                    className="w-full bg-white text-zinc-950 font-bold py-3.5 rounded-xl hover:bg-zinc-100 transition-all shadow-xl active:scale-95 text-sm"
                   >
                       Explore History
                   </button>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-4 font-bold">Check the History button above</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-widest mt-4 font-bold">Access via the history button</p>
               </div>
           </div>
         )}
-        <div className="flex justify-between items-center mb-8 relative z-50">
-          <div className="flex items-center gap-3"><div className="p-2.5 bg-zinc-900/80 rounded-xl border border-zinc-800"><BrainCircuit className="w-8 h-8 text-blue-500" /></div><div><h1 className="text-2xl font-extrabold text-white leading-none">QuizGenius <span className="text-blue-500">AI</span></h1></div></div>
-          <div className="flex items-center gap-3">
+        <div className="flex justify-between items-center mb-6 md:mb-8 relative z-50">
+          <div className="flex items-center gap-2 md:gap-3"><div className="p-2 bg-zinc-900/80 rounded-lg border border-zinc-800"><BrainCircuit className="w-5 h-5 md:w-8 md:h-8 text-blue-500" /></div><div><h1 className="text-lg md:text-2xl font-extrabold text-white leading-none">QuizGenius <span className="text-blue-500">AI</span></h1></div></div>
+          <div className="flex items-center gap-2">
             <button 
                 onClick={onViewHistory} 
-                className={`flex items-center text-sm font-bold px-5 py-2.5 rounded-full transition-all border relative ${hasNewSaves ? 'bg-amber-500 text-zinc-950 border-amber-400 pulse-highlight' : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800'}`}
+                className={`flex items-center text-xs font-bold px-3.5 py-2 md:px-5 md:py-2.5 rounded-full transition-all border relative ${hasNewSaves ? 'bg-amber-500 text-zinc-950 border-amber-400 pulse-highlight' : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:text-white hover:bg-zinc-800'}`}
             >
-              <History className={`w-4 h-4 mr-2 ${hasNewSaves ? 'animate-spin-slow' : ''}`} /> 
+              <History className={`w-3.5 h-3.5 mr-1.5 md:mr-2`} /> 
               History
               {hasNewSaves && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-zinc-950"></span>
+                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-zinc-950"></span>
               )}
             </button>
             <AppMenu onHome={onHome} onSetupApi={onSetupApi} onHowToUse={onHowToUse} onContact={onContact} />
           </div>
         </div>
         <div className="bg-zinc-900/60 backdrop-blur-md rounded-2xl shadow-xl border border-zinc-800/60 overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-6 md:p-10 space-y-10">
-            <div className="space-y-6" ref={contentSectionRef}>
+          <form onSubmit={handleSubmit} className="p-4 md:p-10 space-y-8 md:space-y-10">
+            <div className="space-y-4 md:space-y-6" ref={contentSectionRef}>
               <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-3"><div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-blue-400 font-bold text-sm">1</div><h3 className="text-lg font-bold text-white">Source Material</h3></div>
-                <div className="flex items-center gap-2 px-3 py-1 bg-emerald-950/30 border border-emerald-900/30 rounded-full"><Sparkles className="w-3 h-3 text-emerald-400" /><span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Free Tier Optimized</span></div>
+                <div className="flex items-center space-x-2 md:space-x-3"><div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 flex items-center justify-center text-blue-400 font-bold text-xs md:text-sm">1</div><h3 className="text-base md:text-lg font-bold text-white">Source Material</h3></div>
+                <div className="hidden xs:flex items-center gap-1.5 px-2 py-0.5 bg-emerald-950/30 border border-emerald-900/30 rounded-full"><Sparkles className="w-2.5 h-2.5 text-emerald-400" /><span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">Free Optimized</span></div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <textarea value={content} onChange={(e) => { setContent(e.target.value); if (contentError) setContentError(''); }} placeholder="Paste content here..." className={`w-full h-[360px] p-6 text-zinc-300 bg-zinc-950/50 border rounded-xl focus:ring-2 focus:ring-blue-600 resize-none transition-all ${contentError ? 'border-red-900/50' : 'border-zinc-800'}`} />
-                <div className="flex flex-col h-[360px] gap-4">
-                  <div onClick={() => fileInputRef.current?.click()} className="flex-[0.6] border-2 border-dashed rounded-xl bg-zinc-950/50 hover:bg-zinc-800/60 flex flex-col items-center justify-center p-6 cursor-pointer border-zinc-800 hover:border-blue-500/50 group transition-all">
-                    <div className="w-14 h-14 bg-zinc-900 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300 border border-zinc-800 group-hover:border-blue-500/30">
-                        <ImagePlus className="w-6 h-6 text-blue-500" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                <textarea value={content} onChange={(e) => { setContent(e.target.value); if (contentError) setContentError(''); }} placeholder="Paste content here..." className={`w-full h-[220px] md:h-[360px] p-4 md:p-6 text-zinc-300 bg-zinc-950/50 border rounded-xl focus:ring-2 focus:ring-blue-600 resize-none transition-all text-sm md:text-base ${contentError ? 'border-red-900/50' : 'border-zinc-800'}`} />
+                <div className="flex flex-col h-[220px] md:h-[360px] gap-4">
+                  <div onClick={() => fileInputRef.current?.click()} className="flex-[0.5] border-2 border-dashed rounded-xl bg-zinc-950/50 hover:bg-zinc-800/60 flex flex-col items-center justify-center p-4 cursor-pointer border-zinc-800 hover:border-blue-500/50 group transition-all text-center">
+                    <div className="w-10 h-10 md:w-14 md:h-14 bg-zinc-900 rounded-full flex items-center justify-center mb-2 md:mb-4 group-hover:scale-110 transition-transform border border-zinc-800">
+                        <ImagePlus className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />
                     </div>
-                    <h4 className="font-bold text-white mb-1">Upload Files</h4>
-                    <p className="text-xs text-zinc-500 text-center max-w-[200px]">Supports Images & PDFs<br/>(Max 5 files)</p>
+                    <h4 className="font-bold text-white text-xs md:text-sm mb-1">Upload Files</h4>
+                    <p className="text-[10px] text-zinc-500">Max 5 (Images & PDFs)</p>
                     <input type="file" ref={fileInputRef} accept=".pdf,image/*" multiple onChange={handleFileUpload} className="hidden" />
                   </div>
                   
-                  <div className="flex-1 bg-zinc-950/50 border border-zinc-800 rounded-xl p-4 overflow-hidden flex flex-col">
-                    <div className="flex items-center justify-between mb-3 px-1">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Selected Materials</span>
-                        <span className="text-[10px] font-bold text-zinc-400">{fileItems.length}/5</span>
+                  <div className="flex-1 bg-zinc-950/50 border border-zinc-800 rounded-xl p-3 overflow-hidden flex flex-col">
+                    <div className="flex items-center justify-between mb-2 px-1">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-zinc-500">Materials</span>
+                        <span className="text-[9px] font-bold text-zinc-400">{fileItems.length}/5</span>
                     </div>
                     {fileItems.length === 0 ? (
-                        <div className="flex-1 border border-dashed border-zinc-800/50 rounded-lg flex items-center justify-center">
-                            <p className="text-[11px] text-zinc-600 font-medium">No files selected</p>
+                        <div className="flex-1 border border-dashed border-zinc-800/30 rounded-lg flex items-center justify-center">
+                            <p className="text-[10px] text-zinc-600 font-medium">No files selected</p>
                         </div>
                     ) : (
-                        <div className="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
                             {fileItems.map(f => (
-                                <div key={f.id} className="file-card-animate flex items-center gap-3 bg-zinc-900/80 border border-zinc-800 rounded-lg p-2.5 group relative">
-                                    <div className="w-10 h-10 rounded-md bg-zinc-950 flex items-center justify-center border border-zinc-800 shrink-0 overflow-hidden">
+                                <div key={f.id} className="file-card-animate flex items-center gap-2 bg-zinc-900/80 border border-zinc-800 rounded-lg p-2 group relative">
+                                    <div className="w-8 h-8 rounded bg-zinc-950 flex items-center justify-center border border-zinc-800 shrink-0 overflow-hidden">
                                         {f.status === 'loading' ? (
-                                            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                                            <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
                                         ) : f.mimeType.includes('image') ? (
                                             <img src={f.data} className="w-full h-full object-cover" />
                                         ) : (
-                                            <FileType className="w-5 h-5 text-red-400" />
+                                            <FileType className="w-4 h-4 text-red-400" />
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-semibold text-zinc-200 truncate pr-6">{f.name}</p>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
-                                            {f.status === 'loading' ? (
-                                                <span className="text-[9px] text-zinc-500 uppercase tracking-tighter">Uploading...</span>
-                                            ) : (
-                                                <span className="flex items-center gap-1 text-[9px] text-emerald-400 uppercase tracking-tighter font-bold">
-                                                    <CheckCircle2 className="w-2.5 h-2.5" /> Ready
-                                                </span>
-                                            )}
-                                        </div>
+                                        <p className="text-[11px] font-semibold text-zinc-200 truncate pr-5">{f.name}</p>
                                     </div>
-                                    <button type="button" onClick={() => removeFile(f.id)} className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 hover:text-red-400 rounded-md transition-all text-zinc-500">
-                                        <X className="w-3.5 h-3.5" />
+                                    <button type="button" onClick={() => removeFile(f.id)} className="p-1 hover:bg-red-500/10 hover:text-red-400 rounded transition-all text-zinc-500">
+                                        <X className="w-3 h-3" />
                                     </button>
                                 </div>
                             ))}
@@ -303,35 +290,36 @@ const SetupForm: React.FC<SetupFormProps> = ({
                   </div>
                 </div>
               </div>
-              {contentError && <div className="text-red-400 text-sm flex items-center"><AlertCircle className="w-4 h-4 mr-2" />{contentError}</div>}
+              {contentError && <div className="text-red-400 text-xs flex items-center mt-2"><AlertCircle className="w-3 h-3 mr-1.5" />{contentError}</div>}
             </div>
             <div className="space-y-6">
-              <div className="flex items-center space-x-3 mb-2"><div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-blue-400 font-bold text-sm">2</div><h3 className="text-lg font-bold text-white">Configuration</h3></div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-zinc-950/50 p-5 rounded-xl border border-zinc-800"><label className="text-sm font-semibold text-zinc-400 mb-3 block">Name</label><input ref={nameInputRef} type="text" value={userName} onChange={(e) => { setUserName(e.target.value); if (nameError) setNameError(''); }} placeholder="Enter name" className={`w-full p-3 bg-zinc-900/50 border rounded-lg focus:ring-2 focus:ring-blue-600 transition-all text-white ${nameError ? 'border-red-900/50' : 'border-zinc-800'}`} /></div>
-                  <div className="bg-zinc-950/50 p-5 rounded-xl border border-zinc-800"><label className="text-sm font-semibold text-zinc-400 mb-3 block">Topic</label><input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Auto-title" className="w-full p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-blue-600 transition-all text-white" /></div>
+              <div className="flex items-center space-x-2 md:space-x-3 mb-2"><div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-zinc-800 flex items-center justify-center text-blue-400 font-bold text-xs md:text-sm">2</div><h3 className="text-base md:text-lg font-bold text-white">Configuration</h3></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                  <div className="bg-zinc-950/50 p-4 md:p-5 rounded-xl border border-zinc-800"><label className="text-[11px] md:text-sm font-semibold text-zinc-400 mb-2 block">Name</label><input ref={nameInputRef} type="text" value={userName} onChange={(e) => { setUserName(e.target.value); if (nameError) setNameError(''); }} placeholder="Enter name" className={`w-full p-2.5 md:p-3 bg-zinc-900/50 border rounded-lg focus:ring-2 focus:ring-blue-600 transition-all text-white text-sm ${nameError ? 'border-red-900/50' : 'border-zinc-800'}`} /></div>
+                  <div className="bg-zinc-950/50 p-4 md:p-5 rounded-xl border border-zinc-800"><label className="text-[11px] md:text-sm font-semibold text-zinc-400 mb-2 block">Topic (Optional)</label><input type="text" value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="Auto-title" className="w-full p-2.5 md:p-3 bg-zinc-900/50 border border-zinc-800 rounded-lg focus:ring-2 focus:ring-blue-600 transition-all text-white text-sm" /></div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                 <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800"><label className="text-xs font-bold uppercase text-zinc-500 mb-3 block">Type</label><select value={quizType} onChange={(e) => setQuizType(e.target.value as QuizType)} className="w-full p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-lg text-sm text-white focus:ring-2 focus:ring-blue-600 outline-none">{Object.values(QuizType).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                 <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800"><div className="flex justify-between items-center mb-3"><label className="text-xs font-bold uppercase text-zinc-500">Count</label><span className="text-sm font-bold text-white">{questionCount}</span></div><input type="range" min="3" max="50" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value))} className="w-full accent-blue-500" /></div>
-                 <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800"><div className="flex justify-between items-center mb-3"><label className="text-xs font-bold uppercase text-zinc-500">Time</label><span className="text-sm font-bold text-white">{duration}m</span></div><input type="range" min="1" max="180" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="w-full accent-blue-500" /></div>
-                 <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800">
-                  <label className="text-xs font-bold uppercase text-zinc-500 mb-3 block">Difficulty</label>
-                  <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-800 gap-1">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                 <div className="bg-zinc-950/50 p-3 md:p-4 rounded-xl border border-zinc-800"><label className="text-[9px] font-bold uppercase text-zinc-500 mb-2 block">Type</label><select value={quizType} onChange={(e) => setQuizType(e.target.value as QuizType)} className="w-full p-2 bg-zinc-900/50 border border-zinc-800 rounded-lg text-xs text-white focus:ring-2 focus:ring-blue-600 outline-none">{Object.values(QuizType).map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                 <div className="bg-zinc-950/50 p-3 md:p-4 rounded-xl border border-zinc-800"><div className="flex justify-between items-center mb-2"><label className="text-[9px] font-bold uppercase text-zinc-500">Count</label><span className="text-[11px] font-bold text-white">{questionCount}</span></div><input type="range" min="3" max="50" value={questionCount} onChange={(e) => setQuestionCount(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5" /></div>
+                 <div className="bg-zinc-950/50 p-3 md:p-4 rounded-xl border border-zinc-800"><div className="flex justify-between items-center mb-2"><label className="text-[9px] font-bold uppercase text-zinc-500">Time</label><span className="text-[11px] font-bold text-white">{duration}m</span></div><input type="range" min="1" max="180" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="w-full accent-blue-500 h-1.5" /></div>
+                 
+                 <div className="bg-zinc-950/50 p-3 md:p-4 rounded-xl border border-zinc-800 col-span-1">
+                  <label className="text-[9px] font-bold uppercase text-zinc-500 mb-2 block">Difficulty</label>
+                  <div className="flex bg-zinc-950 p-0.5 rounded-lg border border-zinc-800 gap-0.5">
                     {Object.values(Difficulty).map(d => {
                       const isActive = difficulty === d;
                       let activeStyle = '';
                       if (isActive) {
-                        if (d === Difficulty.EASY) activeStyle = 'bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.3)]';
-                        else if (d === Difficulty.MEDIUM) activeStyle = 'bg-amber-50 text-zinc-950 shadow-[0_0_15px_rgba(245,158,11,0.3)]';
-                        else if (d === Difficulty.HARD) activeStyle = 'bg-rose-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.3)]';
+                        if (d === Difficulty.EASY) activeStyle = 'bg-emerald-600 text-white shadow-lg';
+                        else if (d === Difficulty.MEDIUM) activeStyle = 'bg-amber-600 text-white shadow-lg';
+                        else if (d === Difficulty.HARD) activeStyle = 'bg-rose-600 text-white shadow-lg';
                       }
                       return (
                         <button 
                           key={d} 
                           type="button" 
                           onClick={() => setDifficulty(d)} 
-                          className={`flex-1 py-2 text-[10px] font-black uppercase rounded-lg transition-all duration-300 ${isActive ? activeStyle : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900'}`}
+                          className={`flex-1 py-1.5 text-[8px] md:text-[10px] font-black uppercase rounded transition-all duration-300 ${isActive ? activeStyle : 'text-zinc-600 hover:text-zinc-400'}`}
                         >
                           {d}
                         </button>
@@ -341,7 +329,7 @@ const SetupForm: React.FC<SetupFormProps> = ({
                  </div>
               </div>
             </div>
-            <button type="submit" disabled={isAnyFileLoading} className="relative w-full py-4 bg-white text-zinc-950 text-lg font-bold rounded-xl shadow-lg hover:bg-zinc-100 transition-all flex items-center justify-center gap-3 group">Generate Quiz <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></button>
+            <button type="submit" disabled={isAnyFileLoading} className="relative w-full py-3.5 md:py-4 bg-white text-zinc-950 text-base md:text-lg font-bold rounded-xl shadow-lg hover:bg-zinc-100 transition-all flex items-center justify-center gap-2.5 group active:scale-[0.98]">Generate Quiz <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" /></button>
           </form>
         </div>
       </div>
