@@ -24,7 +24,6 @@ const App: React.FC = () => {
   
   const [apiSourceLog, setApiSourceLog] = useState<string>("");
   const [criticalErrorLogs, setCriticalErrorLogs] = useState<string | null>(null);
-  const [generationCount, setGenerationCount] = useState(0);
 
   useEffect(() => {
     const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
@@ -65,9 +64,6 @@ const App: React.FC = () => {
           setAppState(parsed.appState);
         }
       }
-      
-      const count = parseInt(localStorage.getItem('total_quizzes_generated') || '0');
-      setGenerationCount(count);
     } catch (e) {
       console.error("Failed to load session:", e);
       localStorage.removeItem('quiz_session');
@@ -103,10 +99,6 @@ const App: React.FC = () => {
       const localKeys = localStorage.getItem('user_gemini_keys');
       const hasLocalKeys = localKeys && JSON.parse(localKeys).length > 0;
       setApiSourceLog(hasLocalKeys ? "Using Local Storage APIs" : "Using Internal System APIs");
-      
-      const count = parseInt(localStorage.getItem('total_quizzes_generated') || '0') + 1;
-      localStorage.setItem('total_quizzes_generated', count.toString());
-      setGenerationCount(count);
     } catch(e) {
       setApiSourceLog("Using Internal System APIs");
     }
@@ -138,6 +130,7 @@ const App: React.FC = () => {
       if (msg.includes("CRITICAL_FAILURE_LOGS::")) {
           const logs = msg.split("CRITICAL_FAILURE_LOGS::")[1];
           setCriticalErrorLogs(logs);
+          // Stay on GENERATING state so LoadingSpinner can show the error
       } else {
           setError(msg || "Failed to generate quiz. Please check your connection and try again.");
           setAppState('SETUP');
@@ -277,7 +270,6 @@ const App: React.FC = () => {
       <LoadingSpinner 
         apiSourceLog={apiSourceLog} 
         errorLogs={criticalErrorLogs}
-        generationCount={generationCount}
         onGoToApi={() => { setCriticalErrorLogs(null); setAppState('API_MANAGEMENT'); }}
         onReport={handleReportIssue}
         onCancel={() => { setCriticalErrorLogs(null); setAppState('SETUP'); }}
