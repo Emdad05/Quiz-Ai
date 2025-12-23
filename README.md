@@ -166,10 +166,4 @@ npm run start
 
 Contributing
 Contributions are welcome. Please open issues for bugs or feature requests, and submit pull requests for fixes or enhancements.
-
-License
-Specify your project license here (for example, MIT). If you don’t want to set one yet, add a TODO and update later.
-
----
-
-This README has been updated to clarify the environment variable name(s) used for the Gemini API key, add instructions on how to obtain a Gemini API key, explain that the API key can also be added in the browser via the Add API Key option for local testing, and document how to provide multiple API keys (comma-separated) and parse them in Node.js.
+🗿
