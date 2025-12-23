@@ -1,22 +1,32 @@
 
 import React, { useState, useEffect } from 'react';
-import { Settings, BrainCircuit, Sparkles, Key, Shield, ShieldAlert, Mail, Send, AlertTriangle, X } from 'lucide-react';
+import { Settings, BrainCircuit, Sparkles, Key, Shield, ShieldAlert, Mail, AlertTriangle, X } from 'lucide-react';
 
 interface LoadingSpinnerProps {
     apiSourceLog?: string;
     errorLogs?: string | null;
+    generationCount?: number;
     onGoToApi?: () => void;
     onReport?: () => void;
     onCancel?: () => void;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ apiSourceLog, errorLogs, onGoToApi, onReport, onCancel }) => {
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ apiSourceLog, errorLogs, generationCount = 0, onGoToApi, onReport, onCancel }) => {
   const [progress, setProgress] = useState(0);
   const [currentStage, setCurrentStage] = useState("Initializing AI Engine...");
+  const [showCaution, setShowCaution] = useState(false);
+
+  useEffect(() => {
+    // Show caution if generation count is 5 or more AND they are using internal APIs
+    const usingInternal = apiSourceLog && apiSourceLog.includes('Internal');
+    if (generationCount >= 5 && usingInternal && !errorLogs) {
+        setShowCaution(true);
+    }
+  }, [generationCount, apiSourceLog, errorLogs]);
 
   // Simulate realistic AI generation stages
   useEffect(() => {
-    if (errorLogs) return; // Stop simulation if there's an error
+    if (errorLogs) return;
 
     const startTime = Date.now();
     const duration = 8000; 
@@ -163,6 +173,38 @@ const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ apiSourceLog, errorLogs
           </div>
         )}
       </div>
+
+      {/* Caution Dialogue Overlay */}
+      {showCaution && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
+            <div className="bg-zinc-900 border border-amber-900/50 rounded-3xl shadow-2xl max-w-sm w-full p-8 text-center animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
+                    <AlertTriangle className="w-8 h-8 text-amber-500" />
+                </div>
+                <h3 className="text-xl font-black text-white mb-3 tracking-tight">System Performance Alert</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed mb-8 font-medium">
+                    You've reached <span className="text-white font-bold">{generationCount} quizzes</span>. You are currently using internal shared APIs which may get rate-limited at any time. To ensure continuous high-speed generation, please add your own API keys locally.
+                </p>
+                <div className="flex flex-col gap-3">
+                    <button 
+                        onClick={() => {
+                            setShowCaution(false);
+                            onGoToApi?.();
+                        }} 
+                        className="w-full py-4 bg-amber-500 text-zinc-950 font-black rounded-xl hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20 text-[10px] uppercase tracking-widest active:scale-95"
+                    >
+                        Setup Local API Key
+                    </button>
+                    <button 
+                        onClick={() => setShowCaution(false)} 
+                        className="w-full py-2 text-zinc-500 hover:text-white font-bold text-[9px] uppercase tracking-widest transition-colors"
+                    >
+                        Dismiss for now
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
